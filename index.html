@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Guitar Studio: Master V5.9</title>
+    <title>Guitar Studio: Master V6.0</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; overflow: hidden; }
         body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; position: relative; }
@@ -92,20 +92,37 @@
                 let sIdx = stringMap[char];
                 for(let i=0; i<line.length; i++) {
                     if(!isNaN(line[i]) && line[i] !== ' ' && line[i] !== '-') {
+                        // Note: we store timing as 0 initially
                         temp.push({ s: sIdx, f: parseInt(line[i]), t: 0, raw: i });
                     }
                 }
             }
         });
         currentNotes = temp.sort((a,b) => a.raw - b.raw);
-        updateUI(); safeCloseEditor();
+        updateUI(); 
+        safeCloseEditor();
     }
 
     function updateUI() {
-        const hasTiming = currentNotes.length > 0 && currentNotes[0].t > 0;
-        document.getElementById('play-btn').style.display = (hasTiming && !isPlaying && !isRecording) ? 'flex' : 'none';
-        document.getElementById('record-btn').style.display = (currentNotes.length > 0 && !hasTiming && !isPlaying && !isRecording) ? 'flex' : 'none';
-        document.getElementById('bake-section').style.display = hasTiming ? 'block' : 'none';
+        const hasNotes = currentNotes.length > 0;
+        // Check if the FIRST note has a timestamp (meaning it's been recorded)
+        const hasTiming = hasNotes && currentNotes[0].t > 0;
+
+        // Reset all buttons first
+        document.getElementById('play-btn').style.display = 'none';
+        document.getElementById('record-btn').style.display = 'none';
+        document.getElementById('tap-btn').style.display = 'none';
+        document.getElementById('stop-btn').style.display = 'none';
+        document.getElementById('bake-section').style.display = 'none';
+
+        if (hasNotes && !isRecording && !isPlaying) {
+            if (hasTiming) {
+                document.getElementById('play-btn').style.display = 'flex';
+                document.getElementById('bake-section').style.display = 'block';
+            } else {
+                document.getElementById('record-btn').style.display = 'flex';
+            }
+        }
     }
 
     function uiStartRecord() {
@@ -113,6 +130,8 @@
         const cd = document.getElementById('countdown');
         document.getElementById('record-btn').style.display = 'none';
         document.getElementById('main-editor-btn').style.display = 'none';
+        document.getElementById('speed-btn').style.display = 'none';
+
         const timer = setInterval(() => {
             if (count > 0) { cd.textContent = count; cd.style.color = "#FFD600"; }
             else if (count === 0) { cd.textContent = "GO!"; cd.style.color = "#4CAF50"; }
@@ -129,6 +148,7 @@
     function handleTap(e) {
         if(e) e.preventDefault();
         if(!isRecording || tapIndex >= currentNotes.length) return;
+        // Apply speed multiplier to recorded time
         currentNotes[tapIndex].t = (performance.now() - startTime) * speedMult;
         tapIndex++;
         if(tapIndex === currentNotes.length) uiStop();
@@ -138,6 +158,7 @@
         isPlaying = true; startTime = performance.now();
         document.getElementById('play-btn').style.display = 'none';
         document.getElementById('main-editor-btn').style.display = 'none';
+        document.getElementById('speed-btn').style.display = 'none';
         document.getElementById('stop-btn').style.display = 'flex';
     }
 
@@ -146,6 +167,7 @@
         document.getElementById('tap-btn').style.display = 'none'; 
         document.getElementById('stop-btn').style.display = 'none';
         document.getElementById('main-editor-btn').style.display = 'flex';
+        document.getElementById('speed-btn').style.display = 'flex';
         updateUI(); 
     }
 
@@ -155,7 +177,9 @@
         const ctx = canvas.getContext('2d');
         if(canvas.width !== canvas.clientWidth) { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const now = (performance.now() - startTime) * speedMult;
+        
+        // We only animate if we are playing or recording (though recording is stationary)
+        const now = (isPlaying) ? (performance.now() - startTime) * speedMult : -1000;
         const hitX = 120;
 
         for(let i=1; i<=6; i++) {
@@ -167,9 +191,17 @@
         ctx.beginPath(); ctx.moveTo(hitX, 0); ctx.lineTo(hitX, canvas.height); ctx.stroke();
 
         currentNotes.forEach((n) => {
-            if (n.t === 0) return;
-            let timeDiff = (n.t - now);
-            let x = hitX + (timeDiff * 0.35);
+            if (n.t === 0 && !isRecording) return; // Don't draw timed notes if they aren't timed yet
+            
+            let x;
+            if (isRecording) {
+                // During recording, show the "next" note to tap as a preview
+                x = (currentNotes.indexOf(n) === tapIndex) ? hitX + 50 : -500;
+            } else {
+                let timeDiff = (n.t - now);
+                x = hitX + (timeDiff * 0.35);
+            }
+
             if(x > -100 && x < canvas.width + 100) {
                 let y = (canvas.height / 7) * (n.s + 1);
                 ctx.fillStyle = (isPlaying && Math.abs(x - hitX) < 20) ? "#fff" : "#4CAF50";
