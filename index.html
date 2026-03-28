@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Guitar Studio: Master V5.3</title>
+    <title>Guitar Studio: Master V5.4</title>
     <style>
-        /* [Keeping the clean UI from before] */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; overflow: hidden; }
         body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; }
         #song-header { height: 40px; background: #0a0a0a; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #222; color: #4CAF50; font-weight: bold; font-size: 14px; text-transform: uppercase; }
@@ -25,8 +24,12 @@
         .input-group { margin-bottom: 15px; }
         label { display: block; color: #4CAF50; font-size: 11px; margin-bottom: 5px; font-weight: bold; }
         input, textarea { width: 100%; background: #111; color: #fff; border: 1px solid #333; padding: 12px; font-family: monospace; border-radius: 8px; }
-        #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 140px; color: #4CAF50; font-weight: bold; z-index: 300; pointer-events: none; text-shadow: 0 0 20px #000; }
+        #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 140px; color: #FFD600; font-weight: bold; z-index: 300; pointer-events: none; text-shadow: 0 0 30px rgba(255,214,0,0.5); }
         .hidden { display: none !important; }
+        
+        /* Pulse animation for the countdown */
+        .pulse { animation: pulse-anim 0.2s ease-out; }
+        @keyframes pulse-anim { 0% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.5; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -66,108 +69,10 @@
         <button class="big-btn btn-dark" onclick="toggleEditor()">EDITOR</button>
         <button id="speed-btn" class="big-btn btn-cyan" onclick="toggleSpeed()">1x SPEED</button>
         <button id="play-btn" class="big-btn btn-green" onclick="startPlayback()">▶ PLAY</button>
-        <button id="record-btn" class="big-btn btn-yellow hidden" onclick="uiStartRecord()">● REC</button>
+        <button id="record-btn" class="big-btn btn-yellow hidden" onclick="uiStartRecord()">● REC RHYTHM</button>
         <button id="tap-btn" class="big-btn btn-yellow hidden" onmousedown="handleTap(event)" ontouchstart="handleTap(event)">TAP NOW!</button>
         <button id="stop-btn" class="big-btn btn-red hidden" onclick="uiStop()">STOP</button>
     </div>
 
 <script>
-    let currentNotes = [], songMeta = { name: "", yt: "" };
-    let isRecording = false, isPlaying = false, startTime = 0, tapIndex = 0;
-    let speedMult = 1.0;
-    let audioCtx;
-    const stringBaseFreqs = [329.63, 246.94, 196.00, 146.83, 110.00, 82.41];
-
-    window.onload = () => {
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        requestAnimationFrame(draw);
-    };
-
-    function resizeCanvas() { const c = document.getElementById('game-canvas'); c.width = c.clientWidth; c.height = c.clientHeight; }
-    function toggleEditor() { document.getElementById('editor-drawer').classList.toggle('hidden'); }
-    function toggleSpeed() { speedMult = (speedMult === 1.0) ? 0.5 : 1.0; document.getElementById('speed-btn').textContent = speedMult + "x SPEED"; }
-
-    function loadNewTab() {
-        songMeta.name = document.getElementById('in-name').value || "Untitled Riff";
-        songMeta.yt = document.getElementById('in-yt').value;
-        document.getElementById('song-header').textContent = songMeta.name;
-        
-        const raw = document.getElementById('tab-input').value;
-        const stringMap = { 'e':0, 'B':1, 'G':2, 'D':3, 'A':4, 'E':5 };
-        let temp = [];
-        raw.split('\n').forEach(line => {
-            let char = line.trim()[0];
-            if(stringMap[char] !== undefined) {
-                let sIdx = stringMap[char];
-                for(let i=0; i<line.length; i++) {
-                    if(!isNaN(line[i]) && line[i] !== ' ' && line[i] !== '-') {
-                        temp.push({ s: sIdx, f: parseInt(line[i]), t: 0, played: false, raw: i });
-                    }
-                }
-            }
-        });
-        currentNotes = temp.sort((a,b) => a.raw - b.raw);
-        updateUI();
-        toggleEditor();
-    }
-
-    function updateUI() {
-        const hasTiming = currentNotes.length > 0 && currentNotes[0].t > 0;
-        document.getElementById('play-btn').classList.toggle('hidden', !hasTiming || isPlaying || isRecording);
-        document.getElementById('record-btn').classList.toggle('hidden', hasTiming || isPlaying || isRecording);
-        document.getElementById('bake-section').classList.toggle('hidden', !hasTiming);
-    }
-
-    // --- THE FIX: Countdown for Recording ---
-    function uiStartRecord() {
-        let count = 3;
-        const cd = document.getElementById('countdown');
-        document.getElementById('record-btn').classList.add('hidden');
-
-        const timer = setInterval(() => {
-            cd.textContent = count > 0 ? count : "GO!";
-            if(count === -1) {
-                clearInterval(timer);
-                cd.textContent = "";
-                // Real Start
-                isRecording = true; 
-                tapIndex = 0; 
-                startTime = performance.now();
-                document.getElementById('tap-btn').classList.remove('hidden');
-                document.getElementById('stop-btn').classList.remove('hidden');
-            }
-            count--;
-        }, 800);
-    }
-
-    function handleTap(e) {
-        if(e) e.preventDefault();
-        if(!isRecording || tapIndex >= currentNotes.length) return;
-        currentNotes[tapIndex].t = performance.now() - startTime;
-        tapIndex++;
-        if(tapIndex === currentNotes.length) uiStop();
-    }
-
-    async function startPlayback() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        isPlaying = true; startTime = performance.now();
-        currentNotes.forEach(n => n.played = false);
-        document.getElementById('play-btn').classList.add('hidden');
-        document.getElementById('stop-btn').classList.remove('hidden');
-    }
-
-    function uiStop() { isRecording = false; isPlaying = false; updateUI(); document.getElementById('tap-btn').classList.add('hidden'); document.getElementById('stop-btn').classList.add('hidden'); }
-
-    function draw() {
-        const canvas = document.getElementById('game-canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        const now = (performance.now() - startTime) * speedMult;
-        const hitX = 120;
-
-        for(let i=1; i<=6; i++) {
-            let y = (canvas.height / 7) * i;
-            ctx.strokeStyle = "#222"; ctx.lineWidth = i > 3 ? 4 : 2;
-            ctx.beginPath(); ctx
+    let currentNotes = [], song
