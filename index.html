@@ -3,21 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Guitar Studio: Master V5.8</title>
+    <title>Guitar Studio: Master V5.9</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; overflow: hidden; }
         body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; position: relative; }
         
-        /* THE EDITOR - Highest priority */
         #editor-drawer { 
-            position: fixed; 
-            inset: 0;
-            background: #111; 
-            z-index: 9999; 
-            padding: 20px; 
-            display: none; 
-            flex-direction: column; 
-            border: 5px solid #4CAF50;
+            position: fixed; inset: 0; background: #111; z-index: 9999; padding: 20px; 
+            display: none; flex-direction: column; border: 5px solid #4CAF50;
         }
 
         #song-header { height: 40px; background: #0a0a0a; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #222; color: #4CAF50; font-weight: bold; font-size: 14px; text-transform: uppercase; }
@@ -36,9 +29,6 @@
         .input-group { margin-bottom: 15px; }
         label { display: block; color: #4CAF50; font-size: 11px; margin-bottom: 5px; font-weight: bold; }
         input, textarea { width: 100%; background: #000; color: #fff; border: 1px solid #333; padding: 12px; font-family: monospace; border-radius: 8px; font-size: 16px; }
-        
-        .pulse { animation: pulse-anim 0.2s ease-out; }
-        @keyframes pulse-anim { 0% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.5; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -78,24 +68,13 @@
     </div>
 
 <script>
-    // --- GLOBAL STATE ---
     let currentNotes = [], songMeta = { name: "" };
     let isRecording = false, isPlaying = false, startTime = 0, tapIndex = 0;
     let speedMult = 1.0;
 
-    // --- SAFETY WRAPPERS (Defined early) ---
-    window.safeOpenEditor = function() {
-        console.log("SafeOpen Triggered");
-        const drawer = document.getElementById('editor-drawer');
-        if(drawer) drawer.style.display = 'flex';
-    };
+    window.safeOpenEditor = function() { document.getElementById('editor-drawer').style.display = 'flex'; };
+    window.safeCloseEditor = function() { document.getElementById('editor-drawer').style.display = 'none'; };
 
-    window.safeCloseEditor = function() {
-        const drawer = document.getElementById('editor-drawer');
-        if(drawer) drawer.style.display = 'none';
-    };
-
-    // --- GAME LOGIC ---
     function toggleSpeed() { 
         speedMult = (speedMult === 1.0) ? 0.5 : 1.0; 
         document.getElementById('speed-btn').textContent = speedMult + "x SPEED"; 
@@ -104,7 +83,6 @@
     function loadNewTab() {
         songMeta.name = document.getElementById('in-name').value || "Untitled Riff";
         document.getElementById('song-header').textContent = songMeta.name;
-        
         const raw = document.getElementById('tab-input').value;
         const stringMap = { 'e':0, 'B':1, 'G':2, 'D':3, 'A':4, 'E':5 };
         let temp = [];
@@ -114,23 +92,19 @@
                 let sIdx = stringMap[char];
                 for(let i=0; i<line.length; i++) {
                     if(!isNaN(line[i]) && line[i] !== ' ' && line[i] !== '-') {
-                        temp.push({ s: sIdx, f: parseInt(line[i]), t: 0, played: false, raw: i });
+                        temp.push({ s: sIdx, f: parseInt(line[i]), t: 0, raw: i });
                     }
                 }
             }
         });
         currentNotes = temp.sort((a,b) => a.raw - b.raw);
-        updateUI();
-        safeCloseEditor();
+        updateUI(); safeCloseEditor();
     }
 
     function updateUI() {
         const hasTiming = currentNotes.length > 0 && currentNotes[0].t > 0;
         document.getElementById('play-btn').style.display = (hasTiming && !isPlaying && !isRecording) ? 'flex' : 'none';
-        document.getElementById('record-btn').style.display = (currentNotes.length > 0 && !hasTiming && !isPlaying && !isRecording) ? 'none' : 'flex';
-        // Force Record button off if timing is already there
-        if(hasTiming) document.getElementById('record-btn').style.display = 'none';
-        
+        document.getElementById('record-btn').style.display = (currentNotes.length > 0 && !hasTiming && !isPlaying && !isRecording) ? 'flex' : 'none';
         document.getElementById('bake-section').style.display = hasTiming ? 'block' : 'none';
     }
 
@@ -139,9 +113,7 @@
         const cd = document.getElementById('countdown');
         document.getElementById('record-btn').style.display = 'none';
         document.getElementById('main-editor-btn').style.display = 'none';
-
         const timer = setInterval(() => {
-            cd.classList.remove('pulse'); void cd.offsetWidth; cd.classList.add('pulse');
             if (count > 0) { cd.textContent = count; cd.style.color = "#FFD600"; }
             else if (count === 0) { cd.textContent = "GO!"; cd.style.color = "#4CAF50"; }
             else {
@@ -182,7 +154,6 @@
         if(!canvas) return;
         const ctx = canvas.getContext('2d');
         if(canvas.width !== canvas.clientWidth) { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
-        
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const now = (performance.now() - startTime) * speedMult;
         const hitX = 120;
@@ -201,24 +172,20 @@
             let x = hitX + (timeDiff * 0.35);
             if(x > -100 && x < canvas.width + 100) {
                 let y = (canvas.height / 7) * (n.s + 1);
-                let bounceY = y;
-                if (timeDiff > 0 && timeDiff < 800) bounceY = y - (Math.sin((timeDiff/800) * Math.PI) * 80);
                 ctx.fillStyle = (isPlaying && Math.abs(x - hitX) < 20) ? "#fff" : "#4CAF50";
-                ctx.beginPath(); ctx.roundRect(x - 35, bounceY - 30, 70, 60, 15); ctx.fill();
-                ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.font = "bold 34px Arial"; ctx.fillText(n.f, x, bounceY + 11);
+                ctx.beginPath(); ctx.roundRect(x - 35, y - 30, 70, 60, 15); ctx.fill();
+                ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.font = "bold 34px Arial"; ctx.fillText(n.f, x, y + 11);
             }
         });
         requestAnimationFrame(draw);
     }
-    
-    // START DRAW LOOP
     requestAnimationFrame(draw);
 
     function downloadDadFile() {
         const name = prompt("File Name:", "my-riff");
         if(!name) return;
         const blob = new Blob([`
-            <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>${songMeta.name}</title><style>*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;overflow:hidden;}body{width:100vw;height:100vh;background:#000;color:#fff;font-family:'Arial Black',sans-serif;display:flex;flex-direction:column;}#song-header{height:50px;background:#0a0a0a;display:flex;align-items:center;justify-content:center;border-bottom:3px solid #4CAF50;color:#4CAF50;font-size:18px;text-transform:uppercase;}#game-area{flex:1;position:relative;background:#050505;}#game-canvas{width:100%;height:100%;display:block;}#control-panel{height:140px;background:#111;display:flex;padding:15px;gap:15px;}.big-btn{flex:1;height:100%;border:none;border-radius:20px;font-size:28px;font-weight:bold;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;text-transform:uppercase;box-shadow:0 6px 0 #333;}.btn-green{background:#4CAF50;}.btn-red{background:#F44336;color:#fff;}.btn-cyan{background:#00BCD4;font-size:16px;flex:0.5;}.hidden{display:none!important;}#countdown{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:160px;color:#4CAF50;z-index:100;text-shadow:0 0 20px #000;}</style></head><body><div id="song-header">${songMeta.name}</div><div id="game-area"><div id="countdown"></div><canvas id="game-canvas"></canvas></div><div id="control-panel"><button id="speed-btn" class="big-btn btn-cyan" onclick="toggleSpeed()">SPEED: 1x</button><button id="play-btn" class="big-btn btn-green" onclick="startSong()">▶ START</button><button id="stop-btn" class="big-btn btn-red hidden" onclick="stopSong()">STOP</button></div><script>const SONG_DATA = ${JSON.stringify(currentNotes)};let isPlaying=false,startTime=0,speedMult=1.0;function toggleSpeed(){speedMult=(speedMult===1.0)?0.5:1.0;document.getElementById('speed-btn').textContent='SPEED: '+speedMult+'x';}function startSong(){let count=3;const cd=document.getElementById('countdown');document.getElementById('play-btn').classList.add('hidden');const timer=setInterval(()=>{cd.textContent=count>0?count:"GO!";if(count===-1){clearInterval(timer);cd.textContent="";isPlaying=true;startTime=performance.now();document.getElementById('stop-btn').classList.remove('hidden')}count--},800)}function stopSong(){isPlaying=false;document.getElementById('stop-btn').classList.add('hidden');document.getElementById('play-btn').classList.remove('hidden')}function draw(){const canvas=document.getElementById('game-canvas');if(canvas.width!==canvas.clientWidth){canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight}const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);const now=(isPlaying?performance.now()-startTime:-1000)*speedMult;const hitX=120;for(let i=1;i<=6;i++){let y=(canvas.height/7)*i;ctx.strokeStyle="#333";ctx.lineWidth=i>3?5:2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()}ctx.strokeStyle="#4CAF50";ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(hitX,0);ctx.lineTo(hitX,canvas.height);ctx.stroke();SONG_DATA.forEach((n)=>{let timeDiff=n.t-now;let x=hitX+(timeDiff*0.35);if(x>-100&&x<canvas.width+100){let y=(canvas.height/7)*(n.s+1);let bounceY=y;if(timeDiff>0&&timeDiff<800)bounceY=y-(Math.sin((timeDiff/800)*Math.PI)*80);ctx.fillStyle=(Math.abs(x-hitX)<25)?\"#fff\":\"#4CAF50\";ctx.beginPath();ctx.roundRect(x-45,bounceY-40,90,80,20);ctx.fill();ctx.fillStyle=\"#000\";ctx.textAlign=\"center\";ctx.textBaseline=\"middle\";ctx.font=\"bold 45px Arial\";ctx.fillText(n.f,x,bounceY)}});requestAnimationFrame(draw)}requestAnimationFrame(draw);<\/script></body></html>
+            <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>${songMeta.name}</title><style>*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;overflow:hidden;}body{width:100vw;height:100vh;background:#000;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;}#song-header{height:50px;background:#0a0a0a;display:flex;align-items:center;justify-content:center;border-bottom:3px solid #4CAF50;color:#4CAF50;font-size:18px;text-transform:uppercase;}#game-area{flex:1;position:relative;background:#050505;}#game-canvas{width:100%;height:100%;display:block;}#control-panel{height:140px;background:#111;display:flex;padding:15px;gap:15px;}.big-btn{flex:1;height:100%;border:none;border-radius:20px;font-size:28px;font-weight:bold;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;text-transform:uppercase;box-shadow:0 6px 0 #333;}.btn-green{background:#4CAF50;}.btn-red{background:#F44336;color:#fff;}.btn-cyan{background:#00BCD4;font-size:16px;flex:0.5;}.hidden{display:none!important;}#countdown{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:160px;color:#4CAF50;z-index:100;text-shadow:0 0 20px #000;}</style></head><body><div id="song-header">${songMeta.name}</div><div id="game-area"><div id="countdown"></div><canvas id="game-canvas"></canvas></div><div id="control-panel"><button id="speed-btn" class="big-btn btn-cyan" onclick="toggleSpeed()">SPEED: 1x</button><button id="play-btn" class="big-btn btn-green" onclick="startSong()">▶ START</button><button id="stop-btn" class="big-btn btn-red hidden" onclick="stopSong()">STOP</button></div><script>const SONG_DATA = ${JSON.stringify(currentNotes)};let isPlaying=false,startTime=0,speedMult=1.0;function toggleSpeed(){speedMult=(speedMult===1.0)?0.5:1.0;document.getElementById('speed-btn').textContent='SPEED: '+speedMult+'x';}function startSong(){let count=3;const cd=document.getElementById('countdown');document.getElementById('play-btn').classList.add('hidden');const timer=setInterval(()=>{cd.textContent=count>0?count:"GO!";if(count===-1){clearInterval(timer);cd.textContent="";isPlaying=true;startTime=performance.now();document.getElementById('stop-btn').classList.remove('hidden')}count--},800)}function stopSong(){isPlaying=false;document.getElementById('stop-btn').classList.add('hidden');document.getElementById('play-btn').classList.remove('hidden')}function draw(){const canvas=document.getElementById('game-canvas');if(canvas.width!==canvas.clientWidth){canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight}const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);const now=(isPlaying?performance.now()-startTime:-1000)*speedMult;const hitX=120;for(let i=1;i<=6;i++){let y=(canvas.height/7)*i;ctx.strokeStyle="#333";ctx.lineWidth=i>3?5:2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()}ctx.strokeStyle="#4CAF50";ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(hitX,0);ctx.lineTo(hitX,canvas.height);ctx.stroke();SONG_DATA.forEach((n)=>{let timeDiff=n.t-now;let x=hitX+(timeDiff*0.35);if(x>-100&&x<canvas.width+100){let y=(canvas.height/7)*(n.s+1);ctx.fillStyle=(Math.abs(x-hitX)<25)?\"#fff\":\"#4CAF50\";ctx.beginPath();ctx.roundRect(x-45,y-40,90,80,20);ctx.fill();ctx.fillStyle=\"#000\";ctx.textAlign=\"center\";ctx.textBaseline=\"middle\";ctx.font=\"bold 45px Arial\";ctx.fillText(n.f,x,y)}});requestAnimationFrame(draw)}requestAnimationFrame(draw);<\/script></body></html>
         `], { type: 'text/html' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + ".html"; a.click();
     }
