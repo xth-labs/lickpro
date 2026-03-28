@@ -3,95 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Guitar Studio: Master V6.5</title>
+    <title>Guitar Studio: Master V6.6</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; overflow: hidden; }
-        body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; position: relative; }
-        #editor-drawer { position: fixed; inset: 0; background: #111; z-index: 9999; padding: 20px; display: none; flex-direction: column; border: 5px solid #4CAF50; }
+        body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; }
+        #editor-drawer { position: fixed; inset: 0; background: #111; z-index: 9999; padding: 20px; display: flex; flex-direction: column; border: 5px solid #4CAF50; }
         #song-header { height: 40px; background: #0a0a0a; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #222; color: #4CAF50; font-weight: bold; font-size: 14px; text-transform: uppercase; }
         #game-area { flex: 1; position: relative; background: #050505; }
         #game-canvas { width: 100%; height: 100%; display: block; }
         #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 140px; color: #FFD600; font-weight: bold; z-index: 100; pointer-events: none; }
-        #control-panel { height: 130px; background: #111; display: flex; padding: 10px; gap: 10px; border-top: 1px solid #222; position: relative; z-index: 500; }
+        #control-panel { height: 130px; background: #111; display: flex; padding: 10px; gap: 10px; border-top: 1px solid #222; }
         .big-btn { flex: 1; height: 100%; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
-        .btn-green { background: #4CAF50; } 
-        .btn-yellow { background: #FFD600; } 
-        .btn-red { background: #F44336; color: #fff; }
-        .btn-cyan { background: #00BCD4; color: #000; }
-        .btn-dark { background: #333; color: #fff; font-size: 12px; flex: 0.4; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; color: #4CAF50; font-size: 11px; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; background: #000; color: #fff; border: 1px solid #333; padding: 12px; font-family: monospace; border-radius: 8px; font-size: 16px; }
+        .btn-green { background: #4CAF50; } .btn-yellow { background: #FFD600; } .btn-red { background: #F44336; color: #fff; } .btn-cyan { background: #00BCD4; } .btn-dark { background: #333; color: #fff; font-size: 12px; flex: 0.4; }
+        input, textarea { width: 100%; background: #000; color: #fff; border: 1px solid #333; padding: 12px; font-family: monospace; border-radius: 8px; font-size: 16px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
-    <div id="song-header">STUDIO READY</div>
+    <div id="song-header">STUDIO IDLE</div>
     <div id="game-area">
         <div id="countdown"></div>
         <canvas id="game-canvas"></canvas>
     </div>
 
     <div id="control-panel">
-        <button id="main-editor-btn" class="big-btn btn-dark" onclick="safeOpenEditor()">EDITOR</button>
+        <button id="main-editor-btn" class="big-btn btn-dark" onclick="openEditor()">EDITOR</button>
         <button id="speed-btn" class="big-btn btn-cyan" onclick="toggleSpeed()">1x SPEED</button>
         <button id="play-btn" class="big-btn btn-green" style="display:none;" onclick="startPlayback()">▶ PLAY</button>
-        <button id="record-btn" class="big-btn btn-yellow" style="display:none;" onclick="uiStartRecord()">● REC RHYTHM</button>
-        <button id="tap-btn" class="big-btn btn-yellow" style="display:none;" onmousedown="handleTap(event)" ontouchstart="handleTap(event)">TAP NOW!</button>
+        <button id="record-btn" class="big-btn btn-yellow" style="display:none;" onclick="uiStartRecord()">● REC</button>
+        <button id="tap-btn" class="big-btn btn-yellow" style="display:none;" onmousedown="handleTap(event)" ontouchstart="handleTap(event)">TAP!</button>
         <button id="stop-btn" class="big-btn btn-red" style="display:none;" onclick="uiStop()">STOP</button>
     </div>
 
     <div id="editor-drawer">
         <h2 style="color:#4CAF50; margin-bottom:15px;">Admin: Song Builder</h2>
-        <div class="input-group">
-            <label>SONG NAME</label>
-            <input id="in-name" placeholder="e.g. Day Tripper">
-        </div>
-        <div class="input-group" style="flex:1; display:flex; flex-direction:column;">
-            <label>TABLATURE</label>
-            <textarea id="tab-input" style="flex:1;" placeholder="e|-------0-3-5---"></textarea>
-        </div>
+        <input id="in-name" placeholder="Song Name">
+        <textarea id="tab-input" style="flex:1;" placeholder="Paste Tab Here..."></textarea>
         <div style="display:flex; gap:10px; height:60px;">
-            <button class="big-btn btn-green" onclick="loadNewTab()">1. LOAD TAB</button>
-            <button class="big-btn btn-dark" onclick="safeCloseEditor()">CLOSE</button>
-        </div>
-        <div id="bake-section" style="display:none; margin-top:20px; border-top:1px solid #333; padding-top:20px;">
-            <button class="big-btn btn-blue" style="height:70px; background:#2196F3; color:white; border:none; border-radius:15px; font-weight:bold; cursor:pointer;" onclick="downloadDadFile()">📥 DOWNLOAD DAD-FILE</button>
+            <button class="big-btn btn-green" onclick="loadNewTab()">LOAD TAB</button>
+            <button class="big-btn btn-red" onclick="resetAll()">WIPE ALL</button>
         </div>
     </div>
 
 <script>
-    // --- AUDIO ENGINE ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playNote(stringIdx, fret) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        const baseFreqs = [329.63, 246.94, 196.00, 146.83, 110.00, 82.41];
-        const freq = baseFreqs[stringIdx] * Math.pow(2, fret / 12);
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.6);
-    }
-
-    // --- APP LOGIC ---
     let currentNotes = [], songMeta = { name: "" };
     let isRecording = false, isPlaying = false, startTime = 0, tapIndex = 0, speedMult = 1.0;
 
-    window.safeOpenEditor = function() { document.getElementById('editor-drawer').style.display = 'flex'; };
-    window.safeCloseEditor = function() { document.getElementById('editor-drawer').style.display = 'none'; };
+    function openEditor() { document.getElementById('editor-drawer').style.display = 'flex'; }
+    function closeEditor() { document.getElementById('editor-drawer').style.display = 'none'; }
+    function resetAll() { currentNotes = []; updateUI(); document.getElementById('song-header').textContent = "STUDIO IDLE"; }
 
-    function toggleSpeed() { 
-        speedMult = (speedMult === 1.0) ? 0.5 : 1.0; 
-        document.getElementById('speed-btn').textContent = speedMult + "x SPEED"; 
+    function playNote(s, f) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        const freqs = [329.63, 246.94, 196.00, 146.83, 110.00, 82.41];
+        o.type = 'triangle'; o.frequency.setValueAtTime(freqs[s] * Math.pow(2, f/12), audioCtx.currentTime);
+        g.gain.setValueAtTime(0.3, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
+        o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.6);
     }
 
     function loadNewTab() {
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        songMeta.name = document.getElementById('in-name').value || "Untitled Riff";
+        songMeta.name = document.getElementById('in-name').value || "New Riff";
         document.getElementById('song-header').textContent = songMeta.name;
         const raw = document.getElementById('tab-input').value;
         const stringMap = { 'e':0, 'B':1, 'G':2, 'D':3, 'A':4, 'E':5 };
@@ -108,28 +82,22 @@
             }
         });
         currentNotes = temp.sort((a,b) => a.raw - b.raw);
-        updateUI(); safeCloseEditor();
+        updateUI(); closeEditor();
     }
 
     function updateUI() {
         const hasTiming = currentNotes.length > 0 && currentNotes[0].t > 0;
         document.getElementById('play-btn').style.display = (hasTiming && !isPlaying && !isRecording) ? 'flex' : 'none';
         document.getElementById('record-btn').style.display = (currentNotes.length > 0 && !hasTiming && !isPlaying && !isRecording) ? 'flex' : 'none';
-        document.getElementById('bake-section').style.display = hasTiming ? 'block' : 'none';
     }
 
     function uiStartRecord() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        let count = 3;
-        const cd = document.getElementById('countdown');
+        let count = 3; const cd = document.getElementById('countdown');
         document.getElementById('record-btn').style.display = 'none';
-        document.getElementById('main-editor-btn').style.display = 'none';
         const timer = setInterval(() => {
-            if (count > 0) { cd.textContent = count; cd.style.color = "#FFD600"; }
-            else if (count === 0) { cd.textContent = "GO!"; cd.style.color = "#4CAF50"; }
-            else {
-                clearInterval(timer); cd.textContent = "";
-                isRecording = true; tapIndex = 0; startTime = performance.now();
+            cd.textContent = count > 0 ? count : (count === 0 ? "GO!" : "");
+            if(count === -1) {
+                clearInterval(timer); isRecording = true; tapIndex = 0; startTime = performance.now();
                 document.getElementById('tap-btn').style.display = 'flex';
                 document.getElementById('stop-btn').style.display = 'flex';
             }
@@ -141,17 +109,15 @@
         if(e) e.preventDefault();
         if(!isRecording || tapIndex >= currentNotes.length) return;
         currentNotes[tapIndex].t = (performance.now() - startTime) * speedMult;
-        playNote(currentNotes[tapIndex].s, currentNotes[tapIndex].f); // Hear it as you tap!
+        playNote(currentNotes[tapIndex].s, currentNotes[tapIndex].f);
         tapIndex++;
         if(tapIndex === currentNotes.length) uiStop();
     }
 
     function startPlayback() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
         currentNotes.forEach(n => n.played = false);
         isPlaying = true; startTime = performance.now();
         document.getElementById('play-btn').style.display = 'none';
-        document.getElementById('main-editor-btn').style.display = 'none';
         document.getElementById('stop-btn').style.display = 'flex';
     }
 
@@ -159,7 +125,6 @@
         isRecording = false; isPlaying = false; 
         document.getElementById('tap-btn').style.display = 'none'; 
         document.getElementById('stop-btn').style.display = 'none';
-        document.getElementById('main-editor-btn').style.display = 'flex';
         updateUI(); 
     }
 
@@ -180,26 +145,18 @@
         ctx.strokeStyle = "#4CAF50"; ctx.lineWidth = 4;
         ctx.beginPath(); ctx.moveTo(hitX, 0); ctx.lineTo(hitX, canvas.height); ctx.stroke();
 
-        currentNotes.forEach((n) => {
-            let x;
+        currentNotes.forEach((n, idx) => {
+            let x = -100;
             if (isRecording) {
-                // Show a preview of the note currently waiting to be tapped
-                x = (currentNotes.indexOf(n) === tapIndex) ? hitX + 50 : -500;
-            } else {
-                if (n.t === 0) return;
-                let timeDiff = (n.t - now);
-                x = hitX + (timeDiff * 0.35);
-                
-                // Trigger sound in playback
-                if (isPlaying && x <= hitX && !n.played) {
-                    playNote(n.s, n.f);
-                    n.played = true;
-                }
+                if (idx === tapIndex) x = hitX + 60;
+            } else if (n.t > 0) {
+                x = hitX + ((n.t - now) * 0.35);
+                if (isPlaying && x <= hitX && !n.played) { playNote(n.s, n.f); n.played = true; }
             }
             
             if(x > -100 && x < canvas.width + 100) {
                 let y = (canvas.height / 7) * (n.s + 1);
-                ctx.fillStyle = (n.played || (isRecording && currentNotes.indexOf(n) === tapIndex)) ? "#fff" : "#4CAF50";
+                ctx.fillStyle = n.played ? "#fff" : "#4CAF50";
                 ctx.beginPath(); ctx.roundRect(x - 35, y - 30, 70, 60, 15); ctx.fill();
                 ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.font = "bold 34px Arial"; ctx.fillText(n.f, x, y + 11);
             }
@@ -207,15 +164,6 @@
         requestAnimationFrame(draw);
     }
     requestAnimationFrame(draw);
-
-    function downloadDadFile() {
-        const name = prompt("File Name:", "my-riff");
-        if(!name) return;
-        const blob = new Blob([`
-            <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>${songMeta.name}</title><style>*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;overflow:hidden;}body{width:100vw;height:100vh;background:#000;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;}#song-header{height:50px;background:#0a0a0a;display:flex;align-items:center;justify-content:center;border-bottom:3px solid #4CAF50;color:#4CAF50;font-size:18px;text-transform:uppercase;}#game-area{flex:1;position:relative;background:#050505;}#game-canvas{width:100%;height:100%;display:block;}#control-panel{height:140px;background:#111;display:flex;padding:15px;gap:15px;}.big-btn{flex:1;height:100%;border:none;border-radius:20px;font-size:28px;font-weight:bold;color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;text-transform:uppercase;box-shadow:0 6px 0 #333;}.btn-green{background:#4CAF50;}.btn-red{background:#F44336;color:#fff;}.btn-cyan{background:#00BCD4;font-size:16px;flex:0.5;}.hidden{display:none!important;}#countdown{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:160px;color:#4CAF50;z-index:100;text-shadow:0 0 20px #000;}</style></head><body><div id="song-header">${songMeta.name}</div><div id="game-area"><div id="countdown"></div><canvas id="game-canvas"></canvas></div><div id="control-panel"><button id="speed-btn" class="big-btn btn-cyan" onclick="toggleSpeed()">SPEED: 1x</button><button id="play-btn" class="big-btn btn-green" onclick="startSong()">▶ START</button><button id="stop-btn" class="big-btn btn-red hidden" onclick="stopSong()">STOP</button></div><script>const audioCtx=new(window.AudioContext||window.webkitAudioContext)();function playNote(s,f){if(audioCtx.state==='suspended')audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain();const freqs=[329.63,246.94,196.00,146.83,110.00,82.41];o.type='triangle';o.frequency.setValueAtTime(freqs[s]*Math.pow(2,f/12),audioCtx.currentTime);g.gain.setValueAtTime(0.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.6);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+0.6)}const SONG_DATA = ${JSON.stringify(currentNotes)};let isPlaying=false,startTime=0,speedMult=1.0;function toggleSpeed(){speedMult=(speedMult===1.0)?0.5:1.0;document.getElementById('speed-btn').textContent='SPEED: '+speedMult+'x';}function startSong(){if(audioCtx.state==='suspended')audioCtx.resume();SONG_DATA.forEach(n=>n.played=false);let count=3;const cd=document.getElementById('countdown');document.getElementById('play-btn').classList.add('hidden');const timer=setInterval(()=>{cd.textContent=count>0?count:"GO!";if(count===-1){clearInterval(timer);cd.textContent="";isPlaying=true;startTime=performance.now();document.getElementById('stop-btn').classList.remove('hidden')}count--},800)}function stopSong(){isPlaying=false;document.getElementById('stop-btn').classList.add('hidden');document.getElementById('play-btn').classList.remove('hidden')}function draw(){const canvas=document.getElementById('game-canvas');if(canvas.width!==canvas.clientWidth){canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight}const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);const now=(isPlaying?performance.now()-startTime:-1000)*speedMult;const hitX=120;for(let i=1;i<=6;i++){let y=(canvas.height/7)*i;ctx.strokeStyle="#333";ctx.lineWidth=i>3?5:2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()}ctx.strokeStyle="#4CAF50";ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(hitX,0);ctx.lineTo(hitX,canvas.height);ctx.stroke();SONG_DATA.forEach((n)=>{let timeDiff=n.t-now;let x=hitX+(timeDiff*0.35);if(isPlaying&&x<=hitX&&!n.played){playNote(n.s,n.f);n.played=true}if(x>-100&&x<canvas.width+100){let y=(canvas.height/7)*(n.s+1);ctx.fillStyle=(n.played)?\"#fff\":\"#4CAF50\";ctx.beginPath();ctx.roundRect(x-45,y-40,90,80,20);ctx.fill();ctx.fillStyle=\"#000\";ctx.textAlign=\"center\";ctx.textBaseline=\"middle\";ctx.font=\"bold 45px Arial\";ctx.fillText(n.f,x,y)}});requestAnimationFrame(draw)}requestAnimationFrame(draw);<\/script></body></html>
-        `], { type: 'text/html' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + ".html"; a.click();
-    }
 </script>
 </body>
 </html>
