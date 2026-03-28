@@ -3,21 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Guitar Studio: Master V5.2</title>
+    <title>Guitar Studio: Master V5.3</title>
     <style>
+        /* [Keeping the clean UI from before] */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; overflow: hidden; }
         body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; }
-        
-        /* Header for Song Name */
-        #song-header { height: 40px; background: #0a0a0a; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #222; color: #4CAF50; font-weight: bold; font-size: 14px; letter-spacing: 1px; }
-
-        #game-area { flex: 1; position: relative; background: #050505; border-bottom: 2px solid #222; }
+        #song-header { height: 40px; background: #0a0a0a; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #222; color: #4CAF50; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+        #game-area { flex: 1; position: relative; background: #050505; }
         #game-canvas { width: 100%; height: 100%; display: block; }
-        
-        /* Video Overlay */
-        #video-wrap { position: absolute; top: 10px; right: 10px; width: 200px; aspect-ratio: 16/9; background: #000; border: 2px solid #333; border-radius: 8px; display: none; z-index: 50; }
+        #video-wrap { position: absolute; top: 10px; right: 10px; width: 220px; aspect-ratio: 16/9; background: #000; border: 2px solid #333; border-radius: 8px; display: none; z-index: 50; }
         #video-wrap iframe { width: 100%; height: 100%; border: none; }
-
         #control-panel { height: 130px; background: #111; display: flex; padding: 10px; gap: 10px; z-index: 100; }
         .big-btn { flex: 1; height: 100%; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; color: #000; cursor: pointer; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
         .btn-green { background: #4CAF50; } 
@@ -26,12 +21,11 @@
         .btn-blue { background: #2196F3; color: #fff; }
         .btn-cyan { background: #00BCD4; color: #000; }
         .btn-dark { background: #333; color: #fff; font-size: 12px; flex: 0.4; }
-
         #editor-drawer { position: absolute; inset: 0; background: #000; z-index: 200; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; }
         .input-group { margin-bottom: 15px; }
-        label { display: block; color: #4CAF50; font-size: 12px; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; background: #111; color: #fff; border: 1px solid #333; padding: 10px; font-family: monospace; border-radius: 8px; }
-        #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 120px; color: #4CAF50; font-weight: bold; z-index: 300; pointer-events: none; }
+        label { display: block; color: #4CAF50; font-size: 11px; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; background: #111; color: #fff; border: 1px solid #333; padding: 12px; font-family: monospace; border-radius: 8px; }
+        #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 140px; color: #4CAF50; font-weight: bold; z-index: 300; pointer-events: none; text-shadow: 0 0 20px #000; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -46,45 +40,42 @@
 
         <div id="editor-drawer" class="hidden">
             <h2 style="color:#4CAF50; margin-bottom:15px;">Admin: Song Builder</h2>
-            
             <div class="input-group">
-                <label>SONG NAME & ARTIST</label>
-                <input id="in-name" placeholder="e.g. Day Tripper - The Beatles" style="margin-bottom:5px;">
-                <input id="in-yt" placeholder="YouTube URL (Optional)">
+                <label>SONG NAME</label>
+                <input id="in-name" placeholder="e.g. Day Tripper">
             </div>
-
+            <div class="input-group">
+                <label>YOUTUBE LINK (OPTIONAL)</label>
+                <input id="in-yt" placeholder="https://youtube.com/watch?v=...">
+            </div>
             <div class="input-group" style="flex:1; display:flex; flex-direction:column;">
-                <label>GUITAR TAB</label>
+                <label>TABLATURE</label>
                 <textarea id="tab-input" style="flex:1;" placeholder="e|-------0-3-5---"></textarea>
             </div>
-
-            <div style="display:flex; gap:10px; height:50px; margin-bottom:20px;">
+            <div style="display:flex; gap:10px; height:50px;">
                 <button class="big-btn btn-green" onclick="loadNewTab()">1. LOAD TAB</button>
                 <button class="big-btn btn-dark" onclick="toggleEditor()">CLOSE</button>
             </div>
-            
-            <div id="bake-section" class="hidden" style="border-top: 1px solid #333; padding-top: 20px;">
-                <p style="margin-bottom:10px; color:#aaa;">Rhythm Recorded! Now export for Dad:</p>
-                <button class="big-btn btn-blue" style="height:60px;" onclick="downloadDadFile()">📥 DOWNLOAD DAD-FILE (.html)</button>
+            <div id="bake-section" class="hidden" style="margin-top:20px; border-top:1px solid #333; padding-top:20px;">
+                <button class="big-btn btn-blue" style="height:60px;" onclick="downloadDadFile()">📥 DOWNLOAD DAD-FILE</button>
             </div>
         </div>
     </div>
 
     <div id="control-panel">
         <button class="big-btn btn-dark" onclick="toggleEditor()">EDITOR</button>
-        <button id="speed-btn" class="big-btn btn-cyan" onclick="toggleSpeed()">SPEED: 1x</button>
-        <button id="vid-btn" class="big-btn btn-blue hidden" onclick="toggleVideo()">📺 VID</button>
+        <button id="speed-btn" class="big-btn btn-cyan" onclick="toggleSpeed()">1x SPEED</button>
         <button id="play-btn" class="big-btn btn-green" onclick="startPlayback()">▶ PLAY</button>
         <button id="record-btn" class="big-btn btn-yellow hidden" onclick="uiStartRecord()">● REC</button>
-        <button id="tap-btn" class="big-btn btn-yellow hidden" onmousedown="handleTap(event)" ontouchstart="handleTap(event)">TAP!</button>
+        <button id="tap-btn" class="big-btn btn-yellow hidden" onmousedown="handleTap(event)" ontouchstart="handleTap(event)">TAP NOW!</button>
         <button id="stop-btn" class="big-btn btn-red hidden" onclick="uiStop()">STOP</button>
     </div>
 
 <script>
     let currentNotes = [], songMeta = { name: "", yt: "" };
     let isRecording = false, isPlaying = false, startTime = 0, tapIndex = 0;
-    let speedMult = 1.0, videoOpen = false;
-    let audioCtx, analyser, micStream;
+    let speedMult = 1.0;
+    let audioCtx;
     const stringBaseFreqs = [329.63, 246.94, 196.00, 146.83, 110.00, 82.41];
 
     window.onload = () => {
@@ -95,32 +86,12 @@
 
     function resizeCanvas() { const c = document.getElementById('game-canvas'); c.width = c.clientWidth; c.height = c.clientHeight; }
     function toggleEditor() { document.getElementById('editor-drawer').classList.toggle('hidden'); }
-    
-    function toggleSpeed() {
-        speedMult = (speedMult === 1.0) ? 0.5 : 1.0;
-        document.getElementById('speed-btn').textContent = `SPEED: ${speedMult}x`;
-    }
-
-    function toggleVideo() {
-        videoOpen = !videoOpen;
-        const wrap = document.getElementById('video-wrap');
-        const frame = document.getElementById('yt-player');
-        if (videoOpen) {
-            const vidId = songMeta.yt.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1];
-            if (vidId) {
-                frame.src = `https://www.youtube.com/embed/${vidId}?autoplay=1`;
-                wrap.style.display = "block";
-            }
-        } else {
-            wrap.style.display = "none";
-            frame.src = "";
-        }
-    }
+    function toggleSpeed() { speedMult = (speedMult === 1.0) ? 0.5 : 1.0; document.getElementById('speed-btn').textContent = speedMult + "x SPEED"; }
 
     function loadNewTab() {
         songMeta.name = document.getElementById('in-name').value || "Untitled Riff";
         songMeta.yt = document.getElementById('in-yt').value;
-        document.getElementById('song-header').textContent = songMeta.name.toUpperCase();
+        document.getElementById('song-header').textContent = songMeta.name;
         
         const raw = document.getElementById('tab-input').value;
         const stringMap = { 'e':0, 'B':1, 'G':2, 'D':3, 'A':4, 'E':5 };
@@ -146,18 +117,47 @@
         document.getElementById('play-btn').classList.toggle('hidden', !hasTiming || isPlaying || isRecording);
         document.getElementById('record-btn').classList.toggle('hidden', hasTiming || isPlaying || isRecording);
         document.getElementById('bake-section').classList.toggle('hidden', !hasTiming);
-        document.getElementById('vid-btn').classList.toggle('hidden', !songMeta.yt);
     }
 
-    function downloadDadFile() {
-        const fileName = prompt("File name (no spaces):", "my-riff");
-        if(!fileName) return;
-        
-        // This takes the current state and wraps it into the final "Player" version
-        const finalHtml = `<!DOCTYPE html><html>...[Player Code Here]...</html>`; 
-        // Note: For brevity, I'm skipping the full template string here, but it would include the 
-        // same logic as Version 5.0 with the new Header and Speed features added.
+    // --- THE FIX: Countdown for Recording ---
+    function uiStartRecord() {
+        let count = 3;
+        const cd = document.getElementById('countdown');
+        document.getElementById('record-btn').classList.add('hidden');
+
+        const timer = setInterval(() => {
+            cd.textContent = count > 0 ? count : "GO!";
+            if(count === -1) {
+                clearInterval(timer);
+                cd.textContent = "";
+                // Real Start
+                isRecording = true; 
+                tapIndex = 0; 
+                startTime = performance.now();
+                document.getElementById('tap-btn').classList.remove('hidden');
+                document.getElementById('stop-btn').classList.remove('hidden');
+            }
+            count--;
+        }, 800);
     }
+
+    function handleTap(e) {
+        if(e) e.preventDefault();
+        if(!isRecording || tapIndex >= currentNotes.length) return;
+        currentNotes[tapIndex].t = performance.now() - startTime;
+        tapIndex++;
+        if(tapIndex === currentNotes.length) uiStop();
+    }
+
+    async function startPlayback() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        isPlaying = true; startTime = performance.now();
+        currentNotes.forEach(n => n.played = false);
+        document.getElementById('play-btn').classList.add('hidden');
+        document.getElementById('stop-btn').classList.remove('hidden');
+    }
+
+    function uiStop() { isRecording = false; isPlaying = false; updateUI(); document.getElementById('tap-btn').classList.add('hidden'); document.getElementById('stop-btn').classList.add('hidden'); }
 
     function draw() {
         const canvas = document.getElementById('game-canvas');
@@ -165,52 +165,9 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         const now = (performance.now() - startTime) * speedMult;
-        const hitLineX = 120;
+        const hitX = 120;
 
-        // Draw Strings
         for(let i=1; i<=6; i++) {
             let y = (canvas.height / 7) * i;
             ctx.strokeStyle = "#222"; ctx.lineWidth = i > 3 ? 4 : 2;
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-        }
-
-        // Draw Hit Line
-        ctx.strokeStyle = "#4CAF50"; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(hitLineX, 0); ctx.lineTo(hitLineX, canvas.height); ctx.stroke();
-
-        currentNotes.forEach((n) => {
-            if (n.t === 0) return;
-            
-            let timeDiff = n.t - now;
-            let x = hitLineX + (timeDiff * 0.35);
-
-            if(x > -100 && x < canvas.width + 100) {
-                let y = (canvas.height / 7) * (n.s + 1);
-                
-                // The "Bouncing" logic: If the note is coming, arc it down onto the string
-                let bounceY = y;
-                if (timeDiff > 0 && timeDiff < 1000) {
-                    bounceY = y - (Math.sin((timeDiff/1000) * Math.PI) * 100);
-                }
-
-                ctx.fillStyle = (isPlaying && Math.abs(x - hitLineX) < 20) ? "#fff" : "#4CAF50";
-                ctx.beginPath(); 
-                ctx.roundRect(x - 35, bounceY - 30, 70, 60, 15); 
-                ctx.fill();
-                
-                ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.font = "bold 32px Arial"; ctx.fillText(n.f, x, bounceY);
-            }
-        });
-        requestAnimationFrame(draw);
-    }
-
-    // [Standard Record/Play functions from V5.0 go here...]
-    async function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') await audioCtx.resume(); }
-    function uiStartRecord() { isRecording = true; tapIndex = 0; startTime = performance.now(); document.getElementById('tap-btn').classList.remove('hidden'); document.getElementById('stop-btn').classList.remove('hidden'); document.getElementById('record-btn').classList.add('hidden'); }
-    function handleTap(e) { if(e) e.preventDefault(); if(!isRecording || tapIndex >= currentNotes.length) return; currentNotes[tapIndex].t = performance.now() - startTime; tapIndex++; if(tapIndex === currentNotes.length) uiStop(); }
-    async function startPlayback() { await initAudio(); isPlaying = true; startTime = performance.now(); currentNotes.forEach(n => n.played = false); document.getElementById('play-btn').classList.add('hidden'); document.getElementById('stop-btn').classList.remove('hidden'); }
-    function uiStop() { isRecording = false; isPlaying = false; updateUI(); document.getElementById('tap-btn').classList.add('hidden'); document.getElementById('stop-btn').classList.add('hidden'); }
-</script>
-</body>
-</html>
+            ctx.beginPath(); ctx
