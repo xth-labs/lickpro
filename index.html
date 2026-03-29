@@ -3,360 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BAZ-TECH: Admin Studio V1.9</title>
+    <title>PLAYER: DAY RIPPER</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* Admin Panel Styling */
-        #admin-panel { height: 45%; background: #111; border-bottom: 3px solid #4CAF50; padding: 15px; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
-        .input-row { display: flex; gap: 10px; }
-        input, textarea { background: #000; color: #4CAF50; border: 1px solid #333; padding: 12px; font-family: 'Courier New', monospace; border-radius: 5px; font-size: 14px; }
-        textarea { flex: 1; resize: none; border-color: #222; }
-        
-        /* Game Area */
-        #game-area { flex: 1; position: relative; background: #050505; overflow: hidden; }
-        canvas { width: 100%; height: 100%; display: block; }
-        #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; color: #FFD600; font-weight: bold; pointer-events: none; text-shadow: 0 0 20px rgba(255,214,0,0.5); }
-        
-        /* Controls */
-        #controls { height: 90px; background: #111; display: flex; padding: 10px; gap: 10px; border-top: 1px solid #222; }
-        .btn { flex: 1; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: opacity 0.2s; }
-        .btn:active { opacity: 0.7; }
-        .btn-load { background: #4CAF50; color: #000; }
-        .btn-rec { background: #FFD600; color: #000; }
-        .btn-tap { background: #FFD600; color: #000; font-size: 28px; display: none; box-shadow: 0 0 15px #FFD600; }
-        .btn-bake { background: #E91E63; color: #fff; display: none; }
-        .btn-stop { background: #F44336; color: #fff; display: none; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; }
+        #v { flex: 1; position: relative; overflow: hidden; }
+        canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
+        #yt { width: 100%; height: 100%; border: none; opacity: 0; transition: opacity 0.5s; position: absolute; top: 0; left: 0; }
+        #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
+        .pb { padding: 20px 40px; background: #4CAF50; color: #000; border: none; border-radius: 50px; font-size: 20px; font-weight: bold; cursor: pointer; }
+        #ctrl { height: 80px; background: #111; display: flex; align-items: center; padding: 0 10px; gap: 10px; border-top: 2px solid #222; }
+        .cb { flex: 1; padding: 15px; background: #333; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .stop { background: #F44336; }
+        .active { background: #4CAF50; color: #000; }
     </style>
 </head>
-<body>
-
-    <div id="admin-panel">
-        <div class="input-row">
-            <input id="in-name" style="flex:1" placeholder="SONG NAME (e.g. Day Tripper)">
-            <button class="btn btn-load" onclick="loadTab()">1. LOAD TAB</button>
-        </div>
-        <textarea id="tab-input" placeholder="Paste Guitar Tab here... e.g.&#10;e|-------&#10;B|-------&#10;G|-------&#10;D|---2-4-"></textarea>
+<body id="pb" data-song='[{"s":5,"f":0,"t":401.2000000178814},{"s":5,"f":3,"t":1069},{"s":5,"f":4,"t":1365},{"s":4,"f":2,"t":1599.300000011921},{"s":3,"f":2,"t":1860.7000000178814},{"s":3,"f":0,"t":2115.800000011921},{"s":4,"f":2,"t":2722.0999999940395},{"s":3,"f":4,"t":2990.2000000178814},{"s":4,"f":2,"t":3479.5},{"s":3,"f":0,"t":3727.5},{"s":3,"f":2,"t":3947.9000000059605}]'>
+    <div id="h">DAY RIPPER</div>
+    <div id="v"><div id="yt"></div><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
+    <div id="ctrl">
+        <button class="cb" onclick="spd(0.5, this)">0.5x</button>
+        <button class="cb active" onclick="spd(1.0, this)">1.0x</button>
+        <button id="pp" class="cb" onclick="togP()">PAUSE</button>
+        <button class="cb stop" onclick="reset()">STOP</button>
     </div>
-
-    <div id="game-area">
-        <div id="countdown"></div>
-        <canvas id="game-canvas"></canvas>
-    </div>
-
-    <div id="controls">
-        <button id="rec-btn" class="btn btn-rec" style="display:none;" onclick="startRecording()">2. RECORD RHYTHM</button>
-        <button id="tap-btn" class="btn btn-tap" onmousedown="handleTap(event)" ontouchstart="handleTap(event)">TAP!</button>
-        <button id="bake-btn" class="btn btn-bake" onclick="bakePlayer()">3. BAKE INTERACTIVE PLAYER</button>
-        <button id="stop-btn" class="btn btn-stop" onclick="stopRecording()">STOP</button>
-    </div>
-
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
-    let currentNotes = [];
-    let songName = "";
-    let isRecording = false;
-    let recordingStartTime = 0;
-    let currentTapIndex = 0;
+    let data = [];
+    const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
+    let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp;
 
-    function loadTab() {
-        songName = document.getElementById('in-name').value || "Untitled Song";
-        const rawTab = document.getElementById('tab-input').value;
-        const stringMap = { 'e':0, 'B':1, 'G':2, 'D':3, 'A':4, 'E':5 };
-        let tempNotes = [];
-
-        rawTab.split('\n').forEach(line => {
-            let firstChar = line.trim()[0];
-            if (stringMap[firstChar] !== undefined) {
-                let stringIndex = stringMap[firstChar];
-                for (let i = 0; i < line.length; i++) {
-                    let char = line[i];
-                    if (!isNaN(char) && char !== ' ' && char !== '-' && char !== '|') {
-                        // Handle double digit frets (basic check)
-                        let fret = parseInt(char);
-                        if (!isNaN(line[i+1]) && line[i+1] !== ' ') {
-                            fret = parseInt(char + line[i+1]);
-                        }
-                        tempNotes.push({ 
-                            string: stringIndex, 
-                            fret: fret, 
-                            time: 0, 
-                            rawPos: i 
-                        });
-                    }
-                }
-            }
-        });
-
-        // Sort notes by their horizontal position in the tab
-        currentNotes = tempNotes.sort((a, b) => a.rawPos - b.rawPos);
-        
-        if (currentNotes.length > 0) {
-            document.getElementById('rec-btn').style.display = 'flex';
-            alert("Loaded " + currentNotes.length + " notes. Ready to record rhythm!");
-        } else {
-            alert("Couldn't find any notes. Check your tab format (e|---2---)");
+    function onYouTubeIframeAPIReady() {
+        if("") {
+            ytp = new YT.Player('yt', {
+                videoId: '',
+                playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'modestbranding': 1 },
+                events: { 'onReady': () => console.log("YT Ready") }
+            });
         }
     }
 
-    function startRecording() {
-        let count = 3;
-        document.getElementById('rec-btn').style.display = 'none';
-        const timer = setInterval(() => {
-            if (count > 0) {
-                document.getElementById('countdown').textContent = count;
-            } else if (count === 0) {
-                document.getElementById('countdown').textContent = "GO!";
-            } else {
-                clearInterval(timer);
-                document.getElementById('countdown').textContent = "";
-                beginActualRecording();
-            }
-            count--;
-        }, 800);
-    }
-
-    function beginActualRecording() {
-        isRecording = true;
-        currentTapIndex = 0;
-        recordingStartTime = performance.now();
-        document.getElementById('tap-btn').style.display = 'flex';
-        document.getElementById('stop-btn').style.display = 'flex';
-    }
-
-    function handleTap(e) {
-        if (e) e.preventDefault();
-        if (!isRecording || currentTapIndex >= currentNotes.length) return;
-        
-        currentNotes[currentTapIndex].time = performance.now() - recordingStartTime;
-        currentTapIndex++;
-        
-        if (currentTapIndex === currentNotes.length) {
-            stopRecording();
-        }
-    }
-
-    function stopRecording() {
-        isRecording = false;
-        document.getElementById('tap-btn').style.display = 'none';
-        document.getElementById('stop-btn').style.display = 'none';
-        document.getElementById('bake-btn').style.display = 'flex';
-    }
-
-    function drawAdmin() {
-        const canvas = document.getElementById('game-canvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        
-        if (canvas.width !== canvas.clientWidth) {
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
-        }
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const hitLineX = 120;
-
-        // Draw 6 Strings
-        for (let i = 1; i <= 6; i++) {
-            let y = (canvas.height / 7) * i;
-            ctx.strokeStyle = i > 3 ? "#444" : "#333"; // Thicker for low strings
-            ctx.lineWidth = i > 3 ? 4 : 2;
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-        }
-
-        // Hit Line
-        ctx.strokeStyle = "#4CAF50"; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(hitLineX, 0); ctx.lineTo(hitLineX, canvas.height); ctx.stroke();
-
-        // Visualize Next Note to Tap
-        if (isRecording && currentTapIndex < currentNotes.length) {
-            let note = currentNotes[currentTapIndex];
-            let y = (canvas.height / 7) * (note.string + 1);
-            ctx.fillStyle = "rgba(76, 175, 80, 0.5)";
-            ctx.beginPath(); ctx.arc(hitLineX + 50, y, 25, 0, Math.PI * 2); ctx.fill();
-        }
-
-        requestAnimationFrame(drawAdmin);
-    }
-    drawAdmin();
-
-    function bakePlayer() {
-        const songDataJSON = JSON.stringify(currentNotes.map(n => ({s:n.string, f:n.fret, t:n.time})));
-        
-        // This is the full Interactive Player code
-        const playerHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BAZ-TECH PLAYER: ${songName}</title>
-    <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; transition: background 0.1s; }
-        #header { height: 60px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; letter-spacing: 2px; }
-        #game-view { flex: 1; position: relative; }
-        canvas { width: 100%; height: 100%; display: block; }
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
-        .start-btn { padding: 25px 60px; background: #4CAF50; color: #000; border: none; border-radius: 50px; font-size: 24px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px #4CAF50; }
-    </style>
-</head>
-<body>
-    <div id="header">${songName.toUpperCase()}</div>
-    <div id="game-view">
-        <canvas id="playerCanvas"></canvas>
-        <div id="overlay">
-            <button class="start-btn" onclick="startApp()">START SESS</button>
-        </div>
-    </div>
-
-<script>
-    const songData = ${songDataJSON};
-    const stringFreqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
-    
-    let isPlaying = false;
-    let startTime = 0;
-    let audioCtx, analyser, dataArray;
-    let lastPitch = 0;
-
-    async function startApp() {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') await audioCtx.resume();
-        
+    async function start() {
+        const raw = document.getElementById('pb').getAttribute('data-song');
+        data = JSON.parse(raw);
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        if (ac.state === 'suspended') await ac.resume();
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const source = audioCtx.createMediaStreamSource(stream);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 2048;
-            source.connect(analyser);
-            dataArray = new Float32Array(analyser.fftSize);
-            console.log("Microphone Active");
-        } catch (err) {
-            console.warn("Mic Access Denied. Playing in Sound-Only mode.", err);
-        }
-
-        document.getElementById('overlay').style.display = 'none';
-        isPlaying = true;
-        startTime = performance.now();
-        songData.forEach(n => { n.played = false; n.hit = false; });
+            const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const src = ac.createMediaStreamSource(s);
+            an = ac.createAnalyser(); an.fftSize = 2048;
+            src.connect(an); dArr = new Float32Array(an.fftSize);
+        } catch (e) { console.warn("Mic Off"); }
+        document.getElementById('ov').style.display = 'none';
+        play = true; startT = performance.now();
+        if(ytp && ytp.playVideo) ytp.playVideo();
+        data.forEach(n => { n.p = false; n.h = false; });
     }
 
-    function playVirtualNote(string, fret) {
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        const freq = stringFreqs[string] * Math.pow(2, fret / 12);
-        
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
-        
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.8);
+    function reset() {
+        play = false;
+        document.getElementById('ov').style.display = 'flex';
+        if(ytp) { ytp.stopVideo(); ytp.seekTo(0); }
+        document.getElementById('pp').textContent = "PAUSE";
     }
 
-    function detectPitch() {
-        if (!analyser) return 0;
-        analyser.getFloatTimeDomainData(dataArray);
-        
-        // Simple Volume Check
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i] * dataArray[i];
-        if (Math.sqrt(sum / dataArray.length) < 0.015) return 0;
-
-        // Auto-correlation algorithm
-        let bestR = 0, bestPeriod = -1;
-        for (let period = 40; period < 500; period++) {
-            let r = 0;
-            for (let i = 0; i < dataArray.length - period; i++) r += dataArray[i] * dataArray[i + period];
-            if (r > bestR) { bestR = r; bestPeriod = period; }
-        }
-        return audioCtx.sampleRate / bestPeriod;
+    function togP() {
+        play = !play;
+        document.getElementById('pp').textContent = play ? "PAUSE" : "PLAY";
+        if(ytp) play ? ytp.playVideo() : ytp.pauseVideo();
+        if(!play) pausedT = performance.now() - startT;
+        else startT = performance.now() - pausedT;
     }
 
-    function gameLoop() {
-        const canvas = document.getElementById('playerCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (canvas.width !== canvas.clientWidth) {
-            canvas.width = canvas.clientWidth;
-            canvas.height = canvas.clientHeight;
+    function spd(s, b) {
+        speed = s;
+        document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active'));
+        b.classList.add('active');
+        if(ytp) ytp.setPlaybackRate(s);
+    }
+
+    function pNote(s, f) {
+        if (!ac) return;
+        const o = ac.createOscillator(); const g = ac.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(freqs[s] * Math.pow(2, f / 12), ac.currentTime);
+        g.gain.setValueAtTime(0.2, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.6);
+        o.connect(g); g.connect(ac.destination);
+        o.start(); o.stop(ac.currentTime + 0.6);
+    }
+
+    function getP() {
+        if (!an) return 0;
+        an.getFloatTimeDomainData(dArr);
+        let rms = 0; for (let i = 0; i < dArr.length; i++) rms += dArr[i] * dArr[i];
+        if (Math.sqrt(rms / dArr.length) < 0.015) return 0;
+        let bR = 0, bP = -1;
+        for (let p = 40; p < 500; p++) {
+            let r = 0; for (let i = 0; i < dArr.length - p; i++) r += dArr[i] * dArr[i + p];
+            if (r > bR) { bR = r; bP = p; }
         }
+        return ac.sampleRate / bP;
+    }
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const currentTime = isPlaying ? performance.now() - startTime : -1000;
-        const hitLineX = 120;
-        let currentPitch = detectPitch();
-        let backgroundState = "#000";
-
-        // Draw Strings
+    function run() {
+        const c = document.getElementById('pc'); const x = c.getContext('2d');
+        if (c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
+        x.clearRect(0, 0, c.width, c.height);
+        const now = play ? (performance.now() - startT) * speed : pausedT * speed;
+        const hX = 120; let cp = getP(); let bg = "#000";
         for (let i = 1; i <= 6; i++) {
-            let y = (canvas.height / 7) * i;
-            ctx.strokeStyle = "#222";
-            ctx.lineWidth = i > 3 ? 4 : 2;
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            let y = (c.height / 7) * i; x.strokeStyle = "#222"; x.lineWidth = i > 3 ? 4 : 2;
+            x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
         }
-
-        // Draw Hit Line
-        ctx.strokeStyle = "#4CAF50"; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.moveTo(hitLineX, 0); ctx.lineTo(hitLineX, canvas.height); ctx.stroke();
-
-        // Draw Notes
-        songData.forEach(note => {
-            // Speed of scroll: 0.35 pixels per millisecond
-            let x = hitLineX + ((note.t - currentTime) * 0.35);
-            let targetFreq = stringFreqs[note.s] * Math.pow(2, note.f / 12);
-
-            // Auto-play sound when it crosses the line
-            if (isPlaying && x <= hitLineX && !note.played) {
-                playVirtualNote(note.s, note.f);
-                note.played = true;
+        x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
+        x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, c.height); x.stroke();
+        
+        let allFinished = true;
+        data.forEach(n => {
+            let px = hX + ((n.t - now) * 0.35);
+            if (px > -50) allFinished = false; // Note is still on screen or coming up
+            
+            let tf = freqs[n.s] * Math.pow(2, n.f / 12);
+            if (play && px <= hX && !n.p) { pNote(n.s, n.f); n.p = true; }
+            if (play && Math.abs(px - hX) < 25 && !n.h && cp > 0) {
+                if (Math.abs(cp - tf) < tf * 0.1) n.h = true;
+                else bg = "#300";
             }
-
-            // Pitch Check when note is in the hit-zone
-            if (isPlaying && Math.abs(x - hitLineX) < 30 && !note.hit) {
-                if (currentPitch > 0) {
-                    let diff = Math.abs(currentPitch - targetFreq);
-                    if (diff < targetFreq * 0.1) {
-                        note.hit = true; // Nailed it!
-                    } else {
-                        backgroundState = "#300"; // Close but wrong note
-                    }
-                }
-            }
-
-            if (x > -100 && x < canvas.width + 100) {
-                let y = (canvas.height / 7) * (note.s + 1);
-                ctx.fillStyle = note.hit ? "#FFF" : "#4CAF50";
-                ctx.shadowBlur = note.hit ? 20 : 0;
-                ctx.shadowColor = "#FFF";
-                ctx.beginPath(); 
-                ctx.roundRect(x - 35, y - 30, 70, 60, 15); 
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                
-                ctx.fillStyle = "#000";
-                ctx.textAlign = "center";
-                ctx.font = "bold 32px Arial";
-                ctx.fillText(note.f, x, y + 11);
+            if (px > -100 && px < c.width + 100) {
+                let y = (c.height / 7) * (n.s + 1);
+                x.fillStyle = n.h ? "#FFF" : "#4CAF50";
+                x.beginPath(); x.roundRect(px-35, y-30, 70, 60, 15); x.fill();
+                x.fillStyle = "#000"; x.textAlign = "center"; x.font = "bold 30px Arial";
+                x.fillText(n.f, px, y + 10);
             }
         });
 
-        document.body.style.background = backgroundState;
-        requestAnimationFrame(gameLoop);
-    }
-    gameLoop();
-<\/script>
-</body>
-</html>`;
+        // AUTO-LOOP: Restart if everything has passed and 1.5 seconds of silence have occurred
+        if (play && allFinished && (now - data[data.length-1].t) > 1500) {
+            startT = performance.now();
+            if(ytp) ytp.seekTo(0);
+            data.forEach(n => { n.p = false; n.h = false; });
+        }
 
-        const blob = new Blob([playerHTML], { type: 'text/html' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = songName.toLowerCase().replace(/ /g, '-') + ".html";
-        link.click();
+        document.body.style.background = bg;
+        requestAnimationFrame(run);
     }
+    run();
 </script>
 </body>
 </html>
