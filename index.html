@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BAZ-TECH: Admin Studio V1.2</title>
+    <title>BAZ-TECH: Admin Studio V1.3</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; overflow: hidden; }
@@ -11,7 +11,7 @@
         .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
         input, textarea { background: #000; color: #4CAF50; border: 1px solid #333; padding: 10px; font-family: monospace; border-radius: 5px; font-size: 14px; }
         textarea { flex: 1; resize: none; border-color: #222; }
-        #game-area { flex: 1; position: relative; background: #050505; }
+        #game-area { flex: 1; position: relative; background: #050505; transition: background 0.1s; }
         canvas { width: 100%; height: 100%; display: block; }
         #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; color: #FFD600; font-weight: bold; pointer-events: none; }
         #controls { height: 80px; background: #111; display: flex; padding: 10px; gap: 10px; }
@@ -19,16 +19,15 @@
         .btn-load { background: #4CAF50; color: #000; }
         .btn-rec { background: #FFD600; color: #000; }
         .btn-tap { background: #FFD600; color: #000; font-size: 24px; display: none; }
-        .btn-play { background: #00BCD4; color: #000; display: none; }
-        .btn-stop { background: #F44336; color: #fff; display: none; }
         .btn-bake { background: #E91E63; color: #fff; display: none; width: 220px; }
+        .btn-stop { background: #F44336; color: #fff; display: none; }
     </style>
 </head>
 <body>
 
     <div id="admin-panel">
         <div class="input-row">
-            <input id="in-name" style="flex:1" placeholder="SONG NAME (e.g. Day Tripper)">
+            <input id="in-name" style="flex:1" placeholder="SONG NAME">
             <button class="btn btn-load" onclick="loadTab()">1. LOAD TAB</button>
         </div>
         <textarea id="tab-input" placeholder="PASTE TAB..."></textarea>
@@ -42,30 +41,16 @@
     <div id="controls">
         <button id="rec-btn" class="btn btn-rec" style="display:none;" onclick="startRecording()">2. RECORD RHYTHM</button>
         <button id="tap-btn" class="btn btn-tap" onmousedown="handleTap(event)" ontouchstart="handleTap(event)">TAP!</button>
-        <button id="play-btn" class="btn btn-play" onclick="startPlayback()">3. PREVIEW</button>
-        <button id="bake-btn" class="btn btn-bake" onclick="bakePlayer()">4. BAKE PLAYER</button>
+        <button id="bake-btn" class="btn btn-bake" onclick="bakePlayer()">3. BAKE INTERACTIVE PLAYER</button>
         <button id="stop-btn" class="btn btn-stop" onclick="stopAll()">STOP</button>
     </div>
 
 <script>
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     let currentNotes = [], songName = "";
-    let isRecording = false, isPlaying = false, startTime = 0, tapIndex = 0;
-
-    function playNote(s, f) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        const freqs = [329.63, 246.94, 196.00, 146.83, 110.00, 82.41];
-        o.type = 'triangle';
-        o.frequency.setValueAtTime(freqs[s] * Math.pow(2, f/12), audioCtx.currentTime);
-        g.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.6);
-        o.connect(g); g.connect(audioCtx.destination);
-        o.start(); o.stop(audioCtx.currentTime + 0.6);
-    }
+    let isRecording = false, startTime = 0, tapIndex = 0;
 
     function loadTab() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
         songName = document.getElementById('in-name').value || "Untitled";
         const raw = document.getElementById('tab-input').value;
         const stringMap = { 'e':0, 'B':1, 'G':2, 'D':3, 'A':4, 'E':5 };
@@ -86,11 +71,11 @@
     }
 
     function startRecording() {
-        let count = 3; const cd = document.getElementById('countdown');
+        let count = 3;
         const timer = setInterval(() => {
-            cd.textContent = count > 0 ? count : (count === 0 ? "GO!" : "");
+            document.getElementById('countdown').textContent = count > 0 ? count : (count === 0 ? "GO!" : "");
             if(count === -1) {
-                clearInterval(timer); cd.textContent = "";
+                clearInterval(timer); document.getElementById('countdown').textContent = "";
                 isRecording = true; tapIndex = 0; startTime = performance.now();
                 document.getElementById('tap-btn').style.display = 'flex';
                 document.getElementById('stop-btn').style.display = 'flex';
@@ -103,22 +88,14 @@
         if(e) e.preventDefault();
         if(!isRecording || tapIndex >= currentNotes.length) return;
         currentNotes[tapIndex].t = performance.now() - startTime;
-        playNote(currentNotes[tapIndex].s, currentNotes[tapIndex].f);
         tapIndex++;
         if(tapIndex === currentNotes.length) stopAll();
     }
 
-    function startPlayback() {
-        currentNotes.forEach(n => n.played = false);
-        isPlaying = true; startTime = performance.now();
-        document.getElementById('stop-btn').style.display = 'flex';
-    }
-
     function stopAll() {
-        isRecording = false; isPlaying = false;
+        isRecording = false;
         document.getElementById('tap-btn').style.display = 'none';
         document.getElementById('stop-btn').style.display = 'none';
-        document.getElementById('play-btn').style.display = 'flex';
         document.getElementById('bake-btn').style.display = 'flex';
     }
 
@@ -128,7 +105,6 @@
         const ctx = canvas.getContext('2d');
         if(canvas.width !== canvas.clientWidth) { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const now = isPlaying ? (performance.now() - startTime) : -1000;
         const hitX = 120;
         for(let i=1; i<=6; i++) {
             let y = (canvas.height / 7) * i;
@@ -139,26 +115,20 @@
         ctx.beginPath(); ctx.moveTo(hitX, 0); ctx.lineTo(hitX, canvas.height); ctx.stroke();
         currentNotes.forEach((n, idx) => {
             let x = -100;
-            if (isRecording) { if (idx === tapIndex) x = hitX + 60; }
-            else if (n.t > 0) {
-                x = hitX + ((n.t - now) * 0.35);
-                if (isPlaying && x <= hitX && !n.played) { playNote(n.s, n.f); n.played = true; }
-            }
-            if(x > -100 && x < canvas.width + 100) {
+            if (isRecording && idx === tapIndex) x = hitX + 60;
+            if(x > -100) {
                 let y = (canvas.height / 7) * (n.s + 1);
-                ctx.fillStyle = n.played ? "#fff" : "#4CAF50";
+                ctx.fillStyle = "#4CAF50";
                 ctx.beginPath(); ctx.roundRect(x - 35, y - 30, 70, 60, 15); ctx.fill();
                 ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.font = "bold 34px Arial"; ctx.fillText(n.f, x, y + 11);
             }
         });
         requestAnimationFrame(draw);
     }
-    requestAnimationFrame(draw);
+    draw();
 
     function bakePlayer() {
         const cleanData = JSON.stringify(currentNotes.map(n => ({s:n.s, f:n.f, t:n.t})));
-        
-        // This is a plain text template to avoid variable injection errors
         let template = `<!DOCTYPE html>
 <html>
 <head>
@@ -167,9 +137,9 @@
     <title>SONG_TITLE</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; overflow:hidden; }
-        body { width:100vw; height:100vh; background:#000; color:#fff; font-family:sans-serif; display:flex; flex-direction:column; }
+        body { width:100vw; height:100vh; background:#000; color:#fff; font-family:sans-serif; display:flex; flex-direction:column; transition: background 0.1s; }
         #h { height:50px; display:flex; align-items:center; justify-content:center; border-bottom:2px solid #4CAF50; color:#4CAF50; font-weight:bold; }
-        #g { flex:1; position:relative; background:#050505; }
+        #g { flex:1; position:relative; }
         canvas { width:100%; height:100%; display:block; }
         #c { height:120px; padding:20px; background:#111; }
         .b { width:100%; height:100%; background:#4CAF50; border:none; border-radius:20px; font-size:30px; font-weight:bold; color:#000; }
@@ -178,28 +148,79 @@
 <body>
     <div id="h">SONG_TITLE</div>
     <div id="g"><canvas id="cvs"></canvas></div>
-    <div id="c"><button class="b" onclick="startApp()">START</button></div>
+    <div id="c"><button class="b" onclick="init()">START (ALLOW MIC)</button></div>
 <script>
-    const a = new(window.AudioContext||window.webkitAudioContext)();
-    const d = SONG_DATA;
-    let s = false, t = 0;
-    function p(str,fr){
-        if(a.state==='suspended')a.resume();
-        const o=a.createOscillator(),g=a.createGain();
-        o.type='triangle';o.frequency.setValueAtTime([329.63,246.94,196.00,146.83,110.00,82.41][str]*Math.pow(2,fr/12),a.currentTime);
-        g.gain.setValueAtTime(0.3,a.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+0.6);
-        o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+0.6);
+    const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
+    const data = SONG_DATA;
+    let active = false, startT = 0, aCtx, analyser, dataArray;
+
+    async function init() {
+        aCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = aCtx.createMediaStreamSource(stream);
+        analyser = aCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        dataArray = new Float32Array(analyser.fftSize);
+        active = true; startT = performance.now();
+        document.getElementById('c').style.display = 'none';
+        data.forEach(n => n.p = false);
     }
-    function startApp(){ if(a.state==='suspended')a.resume(); d.forEach(n=>n.p=false); s=true; t=performance.now(); document.getElementById('c').style.display='none'; }
-    function render(){
-        const c=document.getElementById('cvs'); if(c.width!==c.clientWidth){c.width=c.clientWidth;c.height=c.clientHeight;}
-        const x=c.getContext('2d'); x.clearRect(0,0,c.width,c.height);
-        const n=s?performance.now()-t:-1000; const h=120;
-        for(let i=1;i<=6;i++){let y=(c.height/7)*i;x.strokeStyle="#222";x.lineWidth=i>3?4:2;x.beginPath();x.moveTo(0,y);x.lineTo(c.width,y);x.stroke();}
-        x.strokeStyle="#4CAF50";x.lineWidth=4;x.beginPath();x.moveTo(h,0);x.lineTo(h,c.height);x.stroke();
-        d.forEach(m=>{let px=h+((m.t-n)*0.35);if(s&&px<=h&&!m.p){p(m.s,m.f);m.p=true;}
-        if(px>-100&&px<c.width+100){let y=(c.height/7)*(m.s+1);x.fillStyle=m.p?"#fff":"#4CAF50";x.beginPath();x.roundRect(px-35,y-30,70,60,15);x.fill();
-        x.fillStyle="#000";x.textAlign="center";x.font="bold 34px Arial";x.fillText(m.f,px,y+11);}});
+
+    function getPitch() {
+        if(!analyser) return 0;
+        analyser.getFloatTimeDomainData(dataArray);
+        let sum = 0; for(let i=0; i<dataArray.length; i++) sum += dataArray[i]*dataArray[i];
+        if(Math.sqrt(sum/dataArray.length) < 0.01) return 0; // Too quiet
+        
+        // Basic Auto-correlation
+        let bestR = 0, bestPeriod = -1;
+        for (let period = 40; period < 500; period++) {
+            let r = 0;
+            for (let i = 0; i < dataArray.length - period; i++) r += dataArray[i] * dataArray[i + period];
+            if (r > bestR) { bestR = r; bestPeriod = period; }
+        }
+        return aCtx.sampleRate / bestPeriod;
+    }
+
+    function render() {
+        const c = document.getElementById('cvs');
+        if(c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
+        const x = c.getContext('2d'); x.clearRect(0,0,c.width,c.height);
+        const now = active ? performance.now() - startT : -1000;
+        const hX = 120;
+        
+        // Detection Logic
+        let currentPitch = getPitch();
+        let backgroundState = "#000";
+
+        for(let i=1;i<=6;i++){
+            let y=(c.height/7)*i; x.strokeStyle="#222"; x.lineWidth=i>3?4:2;
+            x.beginPath(); x.moveTo(0,y); x.lineTo(c.width,y); x.stroke();
+        }
+        x.strokeStyle="#4CAF50"; x.lineWidth=4; x.beginPath(); x.moveTo(hX,0); x.lineTo(hX,c.height); x.stroke();
+
+        data.forEach(m => {
+            let px = hX + ((m.t - now) * 0.35);
+            let targetFreq = freqs[m.s] * Math.pow(2, m.f/12);
+            
+            // If note is on the line
+            if(active && Math.abs(px - hX) < 20 && !m.p) {
+                if(currentPitch > 0) {
+                    let diff = Math.abs(currentPitch - targetFreq);
+                    if(diff < targetFreq * 0.1) { m.p = true; } // Correct Pitch
+                    else { backgroundState = "#300"; } // Wrong Pitch
+                }
+            }
+
+            if(px > -100 && px < c.width + 100){
+                let y=(c.height/7)*(m.s+1);
+                x.fillStyle = m.p ? "#fff" : "#4CAF50";
+                x.beginPath(); x.roundRect(px-35,y-30,70,60,15); x.fill();
+                x.fillStyle="#000"; x.textAlign="center"; x.font="bold 34px Arial"; x.fillText(m.f,px,y+11);
+            }
+        });
+        document.body.style.background = backgroundState;
         requestAnimationFrame(render);
     }
     render();
@@ -207,10 +228,7 @@
 </body>
 </html>`;
 
-        // Manual string replacement is safer than backtick injection
-        let finalHtml = template.replace(/SONG_TITLE/g, songName);
-        finalHtml = finalHtml.replace("SONG_DATA", cleanData);
-
+        let finalHtml = template.replace(/SONG_TITLE/g, songName).replace("SONG_DATA", cleanData);
         const blob = new Blob([finalHtml], { type: 'text/html' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
