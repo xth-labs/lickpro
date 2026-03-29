@@ -3,23 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BAZ-TECH: Admin Studio V1.0</title>
+    <title>BAZ-TECH: Admin Studio V1.1</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* The Dashboard */
-        #admin-panel { height: 40%; background: #111; border-bottom: 3px solid #4CAF50; display: flex; flex-direction: column; padding: 15px; z-index: 1000; }
+        #admin-panel { height: 45%; background: #111; border-bottom: 3px solid #4CAF50; display: flex; flex-direction: column; padding: 15px; z-index: 1000; }
         .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
         input, textarea { background: #000; color: #4CAF50; border: 1px solid #333; padding: 10px; font-family: monospace; border-radius: 5px; font-size: 14px; }
-        textarea { flex: 1; resize: none; }
-        
-        /* The Stage */
+        textarea { flex: 1; resize: none; border-color: #222; }
         #game-area { flex: 1; position: relative; background: #050505; }
         canvas { width: 100%; height: 100%; display: block; }
         #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; color: #FFD600; font-weight: bold; pointer-events: none; }
-
-        /* Controls */
         #controls { height: 80px; background: #111; display: flex; padding: 10px; gap: 10px; }
         .btn { flex: 1; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 14px; }
         .btn-load { background: #4CAF50; color: #000; }
@@ -27,17 +21,18 @@
         .btn-tap { background: #FFD600; color: #000; font-size: 24px; display: none; }
         .btn-play { background: #00BCD4; color: #000; display: none; }
         .btn-stop { background: #F44336; color: #fff; display: none; }
-        .btn-bake { background: #2196F3; color: #fff; display: none; width: 200px; }
+        .btn-bake { background: #2196F3; color: #fff; display: none; width: 220px; }
     </style>
 </head>
 <body>
 
     <div id="admin-panel">
         <div class="input-row">
-            <input id="in-name" style="flex:1" placeholder="SONG NAME (e.g. Greensleeves)">
+            <input id="in-name" style="flex:1" placeholder="SONG NAME">
+            <input id="in-yt" style="flex:1" placeholder="YOUTUBE URL (Optional)">
             <button class="btn btn-load" onclick="loadTab()">1. LOAD TAB</button>
         </div>
-        <textarea id="tab-input" placeholder="PASTE TAB HERE... (e|---0--3--5---)"></textarea>
+        <textarea id="tab-input" placeholder="PASTE TAB..."></textarea>
     </div>
 
     <div id="game-area">
@@ -55,7 +50,7 @@
 
 <script>
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    let currentNotes = [], songName = "";
+    let currentNotes = [], songName = "", ytUrl = "";
     let isRecording = false, isPlaying = false, startTime = 0, tapIndex = 0;
 
     function playNote(s, f) {
@@ -73,6 +68,7 @@
     function loadTab() {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         songName = document.getElementById('in-name').value || "Untitled";
+        ytUrl = document.getElementById('in-yt').value || "";
         const raw = document.getElementById('tab-input').value;
         const stringMap = { 'e':0, 'B':1, 'G':2, 'D':3, 'A':4, 'E':5 };
         let temp = [];
@@ -123,6 +119,7 @@
         document.getElementById('play-btn').style.display = 'none';
         document.getElementById('stop-btn').style.display = 'flex';
         document.getElementById('bake-btn').style.display = 'none';
+        document.getElementById('rec-btn').style.display = 'none';
     }
 
     function stopAll() {
@@ -153,9 +150,8 @@
 
         currentNotes.forEach((n, idx) => {
             let x = -100;
-            if (isRecording) {
-                if (idx === tapIndex) x = hitX + 60;
-            } else if (n.t > 0) {
+            if (isRecording) { if (idx === tapIndex) x = hitX + 60; }
+            else if (n.t > 0) {
                 x = hitX + ((n.t - now) * 0.35);
                 if (isPlaying && x <= hitX && !n.played) { playNote(n.s, n.f); n.played = true; }
             }
@@ -172,16 +168,83 @@
 
     function bakePlayer() {
         const cleanData = JSON.stringify(currentNotes.map(n => ({s:n.s, f:n.f, t:n.t})));
-        const html = `
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>\${songName}</title><style>*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;overflow:hidden;}body{width:100vw;height:100vh;background:#000;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;}#header{height:50px;display:flex;align-items:center;justify-content:center;border-bottom:2px solid #4CAF50;color:#4CAF50;text-transform:uppercase;font-weight:bold;}#game{flex:1;position:relative;background:#050505;}canvas{width:100%;height:100%;display:block;}#controls{height:120px;padding:20px;background:#111;}.btn{width:100%;height:100%;background:#4CAF50;border:none;border-radius:20px;font-size:30px;font-weight:bold;cursor:pointer;}</style></head>
-<body><div id="header">\${songName}</div><div id="game"><canvas id="c"></canvas></div><div id="controls"><button class="btn" onclick="start()">START</button></div>
+        const playerHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>${songName}</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; overflow:hidden; }
+        body { width:100vw; height:100vh; background:#000; color:#fff; font-family:sans-serif; display:flex; flex-direction:column; }
+        #h { height:50px; display:flex; align-items:center; justify-content:center; border-bottom:2px solid #4CAF50; color:#4CAF50; text-transform:uppercase; font-weight:bold; }
+        #g { flex:1; position:relative; background:#050505; }
+        canvas { width:100%; height:100%; display:block; }
+        #c { height:120px; padding:20px; background:#111; }
+        .b { width:100%; height:100%; background:#4CAF50; border:none; border-radius:20px; font-size:30px; font-weight:bold; cursor:pointer; }
+    </style>
+</head>
+<body>
+    <div id="h">${songName}</div>
+    <div id="g"><canvas id="canvas"></canvas></div>
+    <div id="c"><button class="b" onclick="start()">START</button></div>
 <script>
-const ctxAudio=new(window.AudioContext||window.webkitAudioContext)();function p(s,f){if(ctxAudio.state==='suspended')ctxAudio.resume();const o=ctxAudio.createOscillator(),g=ctxAudio.createGain();o.type='triangle';o.frequency.setValueAtTime([329.63,246.94,196.00,146.83,110.00,82.41][s]*Math.pow(2,f/12),ctxAudio.currentTime);g.gain.setValueAtTime(0.3,ctxAudio.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,ctxAudio.currentTime+0.6);o.connect(g);g.connect(ctxAudio.destination);o.start();o.stop(ctxAudio.currentTime+0.6)}
-const D=\${cleanData};let active=false,startT=0;function start(){if(ctxAudio.state==='suspended')ctxAudio.resume();D.forEach(n=>n.p=false);active=true;startT=performance.now();document.getElementById('controls').style.display='none'}
-function draw(){const canvas=document.getElementById('c');if(canvas.width!==canvas.clientWidth){canvas.width=canvas.clientWidth;canvas.height=canvas.clientHeight}const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);const now=active?performance.now()-startT:-1000;const hX=120;for(let i=1;i<=6;i++){let y=(canvas.height/7)*i;ctx.strokeStyle="#222";ctx.lineWidth=i>3?4:2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()}ctx.strokeStyle="#4CAF50";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(hX,0);ctx.lineTo(hX,canvas.height);ctx.stroke();D.forEach(n=>{let x=hX+((n.t-now)*0.35);if(active&&x<=hX&&!n.p){p(n.s,n.f);n.p=true}if(x>-100&&x<canvas.width+100){let y=(canvas.height/7)*(n.s+1);ctx.fillStyle=n.p?"#fff":"#4CAF50";ctx.beginPath();ctx.roundRect(x-35,y-30,70,60,15);ctx.fill();ctx.fillStyle="#000";ctx.textAlign="center";ctx.font="bold 34px Arial";ctx.fillText(n.f,x,y+11)}});requestAnimationFrame(draw)}draw();
-<\/script></body></html>`;
-        const blob = new Blob([html], { type: 'text/html' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = songName.replace(/\s+/g, '-').toLowerCase() + ".html"; a.click();
+    const aCtx = new(window.AudioContext||window.webkitAudioContext)();
+    const notes = ${cleanData};
+    let active = false, startT = 0;
+
+    function play(s,f) {
+        if(aCtx.state==='suspended') aCtx.resume();
+        const o=aCtx.createOscillator(), g=aCtx.createGain();
+        o.type='triangle';
+        o.frequency.setValueAtTime([329.63,246.94,196.00,146.83,110.00,82.41][s]*Math.pow(2,f/12),aCtx.currentTime);
+        g.gain.setValueAtTime(0.3,aCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.0001,aCtx.currentTime+0.6);
+        o.connect(g); g.connect(aCtx.destination); o.start(); o.stop(aCtx.currentTime+0.6);
+    }
+
+    function start() {
+        if(aCtx.state==='suspended') aCtx.resume();
+        notes.forEach(n => n.p = false);
+        active = true; startT = performance.now();
+        document.getElementById('c').style.display = 'none';
+    }
+
+    function draw() {
+        const cvs = document.getElementById('canvas');
+        if(cvs.width !== cvs.clientWidth) { cvs.width = cvs.clientWidth; cvs.height = cvs.clientHeight; }
+        const ctx = cvs.getContext('2d');
+        ctx.clearRect(0,0,cvs.width,cvs.height);
+        const now = active ? performance.now() - startT : -1000;
+        const hX = 120;
+        for(let i=1;i<=6;i++) {
+            let y = (cvs.height/7)*i;
+            ctx.strokeStyle="#222"; ctx.lineWidth=i>3?4:2;
+            ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cvs.width,y); ctx.stroke();
+        }
+        ctx.strokeStyle="#4CAF50"; ctx.lineWidth=4;
+        ctx.beginPath(); ctx.moveTo(hX,0); ctx.lineTo(hX,cvs.height); ctx.stroke();
+        notes.forEach(n => {
+            let x = hX + ((n.t - now) * 0.35);
+            if(active && x <= hX && !n.p) { play(n.s, n.f); n.p = true; }
+            if(x > -100 && x < cvs.width + 100) {
+                let y = (cvs.height/7)*(n.s+1);
+                ctx.fillStyle = n.p ? "#fff" : "#4CAF50";
+                ctx.beginPath(); ctx.roundRect(x-35, y-30, 70, 60, 15); ctx.fill();
+                ctx.fillStyle = "#000"; ctx.textAlign = "center"; ctx.font = "bold 34px Arial"; ctx.fillText(n.f, x, y+11);
+            }
+        });
+        requestAnimationFrame(draw);
+    }
+    draw();
+<\/script>
+</body>
+</html>`;
+        const blob = new Blob([playerHtml], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = songName.toLowerCase().replace(/ /g, '-') + ".html";
+        a.click();
     }
 </script>
 </body>
