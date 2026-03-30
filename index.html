@@ -3,29 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PLAYER: DAY RIPPER</title>
+    <title>BAZ-TECH: Admin Studio V3.2</title>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
-        #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; position: relative; }
-        #fs-btn { position: absolute; right: 10px; background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        #v { flex: 1; position: relative; overflow: hidden; }
-        canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
-        #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
-        .pb { padding: 20px 40px; background: #4CAF50; color: #000; border: none; border-radius: 50px; font-size: 20px; font-weight: bold; cursor: pointer; }
-        #ctrl { height: 80px; background: #111; display: flex; align-items: center; padding: 0 10px; gap: 10px; border-top: 2px solid #222; }
-        .cb { flex: 1; padding: 15px; background: #333; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+        #admin-panel { height: 45%; background: #111; border-bottom: 3px solid #4CAF50; padding: 15px; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
+        .input-row { display: flex; gap: 10px; }
+        input, textarea { background: #000; color: #4CAF50; border: 1px solid #333; padding: 12px; font-family: 'Courier New', monospace; border-radius: 5px; font-size: 14px; outline: none; }
+        textarea { flex: 1; resize: none; border-color: #222; }
+        #game-area { flex: 1; position: relative; background: #000; }
+        canvas { width: 100%; height: 100%; display: block; }
+        #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); z-index: 100; }
+        .pb { padding: 25px 50px; background: #4CAF50; color: #000; border: none; border-radius: 50px; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(76,175,80,0.4); }
+        #ctrl { height: 70px; background: #111; display: flex; align-items: center; padding: 0 10px; gap: 8px; border-top: 2px solid #222; }
+        .cb { flex: 1; padding: 12px; background: #333; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
         .stop { background: #F44336; }
         .active { background: #4CAF50; color: #000; }
+        #fs-ind { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #444; }
     </style>
 </head>
 <body id="pb" data-song='[{"s":3,"f":2,"t":588.4},{"s":3,"f":4,"t":1133.1},{"s":2,"f":2,"t":1630.9},{"s":2,"f":4,"t":2118.6},{"s":1,"f":2,"t":2568.1},{"s":1,"f":5,"t":3037.4},{"s":0,"f":2,"t":3532.7},{"s":0,"f":5,"t":3950.5}]'>
-    
-    <div id="h">
-        DAY RIPPER 
-        <button id="fs-btn" onclick="toggleFS()">GO FULLSCREEN</button>
+
+    <div id="admin-panel">
+        <div class="input-row">
+            <input type="text" id="s-name" placeholder="Song Name" value="DAY TRIPPER" style="flex:1">
+            <button class="cb" onclick="updateSong()" style="flex:0.3; background: #4CAF50; color: #000;">LOAD TAB</button>
+        </div>
+        <textarea id="s-data" placeholder='Paste JSON here...'>[{"s":3,"f":2,"t":588.4},{"s":3,"f":4,"t":1133.1},{"s":2,"f":2,"t":1630.9},{"s":2,"f":4,"t":2118.6},{"s":1,"f":2,"t":2568.1},{"s":1,"f":5,"t":3037.4},{"s":0,"f":2,"t":3532.7},{"s":0,"f":5,"t":3950.5}]</textarea>
     </div>
 
-    <div id="v">
+    <div id="game-area">
+        <div id="fs-ind">AUTO-FS ENABLED</div>
         <canvas id="pc"></canvas>
         <div id="ov"><button class="pb" onclick="start()">START SESSION</button></div>
     </div>
@@ -34,7 +42,7 @@
         <button class="cb" onclick="spd(0.5, this)">0.5x</button>
         <button class="cb active" onclick="spd(1.0, this)">1.0x</button>
         <button id="pp" class="cb" onclick="togP()">PAUSE</button>
-        <button class="cb stop" onclick="reset()">STOP</button>
+        <button class="cb stop" onclick="reset()">STOP / EDIT</button>
     </div>
 
 <script>
@@ -42,20 +50,17 @@
     const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
     let play = false, startT = 0, pausedT = 0, speed = 1.0, ac, an, dArr;
 
-    function toggleFS() {
-        const doc = document.documentElement;
-        if (!document.fullscreenElement) {
-            if (doc.requestFullscreen) doc.requestFullscreen();
-            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-            document.getElementById('fs-btn').textContent = "EXIT FS";
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
-            document.getElementById('fs-btn').textContent = "GO FULLSCREEN";
-        }
+    function updateSong() {
+        try {
+            const raw = document.getElementById('s-data').value;
+            data = JSON.parse(raw);
+            document.getElementById('pb').setAttribute('data-song', raw);
+            alert("Tab Loaded Successfully");
+        } catch(e) { alert("Invalid JSON Data"); }
     }
 
     async function start() {
-        // Trigger Fullscreen on first interaction
+        // Force Fullscreen for Dad's testing
         const doc = document.documentElement;
         if (doc.requestFullscreen) doc.requestFullscreen();
         else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
@@ -72,6 +77,7 @@
         } catch (e) { console.warn("Mic Access Denied"); }
 
         document.getElementById('ov').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'none'; // Hide editor while playing
         play = true; startT = performance.now();
         data.forEach(n => { n.p = false; n.h = false; });
     }
@@ -85,7 +91,12 @@
         o.start(); o.stop(ac.currentTime + 0.6);
     }
 
-    function reset() { play = false; document.getElementById('ov').style.display = 'flex'; }
+    function reset() { 
+        play = false; 
+        document.getElementById('ov').style.display = 'flex'; 
+        document.getElementById('admin-panel').style.display = 'flex';
+        if (document.exitFullscreen) document.exitFullscreen();
+    }
     
     function togP() { 
         play = !play; 
@@ -122,19 +133,17 @@
         const now = play ? (performance.now() - startT) * speed : pausedT * speed;
         const hX = 120; let cp = getP(); 
         
-        // Draw String Lines
         for (let i = 1; i <= 6; i++) {
             let y = (c.height / 7) * i; x.strokeStyle = "#222"; x.lineWidth = 4;
             x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
         }
-        // Draw Hit Line
         x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
         x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, c.height); x.stroke();
 
         let allFinished = true;
         let sortedNotes = data.filter(n => (hX + ((n.t - now) * 0.35)) > -100).sort((a,b) => a.t - b.t);
 
-        // --- RHYTHM GUIDE LINE ---
+        // --- RHYTHM GUIDE ---
         if (play && sortedNotes.length > 1) {
             let n1 = sortedNotes.find(n => (hX + ((n.t - now) * 0.35)) <= hX + 50 && (hX + ((n.t - now) * 0.35)) >= -50);
             let n2 = sortedNotes.find(n => (hX + ((n.t - now) * 0.35)) > (n1 ? hX + ((n1.t - now) * 0.35) : hX));
@@ -149,18 +158,11 @@
         data.forEach(n => {
             let px = hX + ((n.t - now) * 0.35);
             if (px > -60) allFinished = false; 
-            
             let tf = freqs[n.s] * Math.pow(2, n.f / 12);
-            
-            // Sound Playback trigger
             if (play && px <= hX && !n.p) { pNote(n.s, n.f); n.p = true; }
-
-            // Detection Logic (Positive Only)
             if (play && px <= hX + 25 && px >= hX - 60 && !n.h && cp > 0) {
                 if (Math.abs(cp - tf) < tf * 0.1) n.h = true;
             }
-
-            // Draw Note
             if (px > -100 && px < c.width + 100) {
                 let y = (c.height / 7) * (n.s + 1);
                 x.fillStyle = n.h ? "#FFF" : "#4CAF50";
@@ -170,7 +172,6 @@
             }
         });
 
-        // Auto Loop
         if (play && allFinished && data.length > 0) {
             startT = performance.now();
             data.forEach(n => { n.p = false; n.h = false; });
