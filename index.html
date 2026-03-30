@@ -3,12 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PLAYER: DAY RIPPER</title>
+    <title>BAZ-TECH: Admin Studio V3.2</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; overflow: hidden; }
+        #admin-panel { height: 45%; background: #111; border-bottom: 3px solid #4CAF50; padding: 15px; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
+        /* Header for title and FS button */
+        #h-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        #fs-btn { background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+        .input-row { display: flex; gap: 10px; }
+        input, textarea { background: #000; color: #4CAF50; border: 1px solid #333; padding: 12px; font-family: 'Courier New', monospace; border-radius: 5px; font-size: 14px; outline: none; }
+        textarea { flex: 1; resize: none; border-color: #222; }
+        #game-area { flex: 1; position: relative; background: #050505; overflow: hidden; }
+        canvas { width: 100%; height: 100%; display: block; }
+        #countdown { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; color: #FFD600; font-weight: bold; pointer-events: none; text-shadow: 0 0 20px rgba(255,214,0,0.5); }
+        #controls { height: 90px; background: #111; display: flex; padding: 10px; gap: 10px; border-top: 1px solid #222; }
+        .btn { flex: 1; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: opacity 0.2s; }
+        .btn:active { opacity: 0.7; }
+        .btn-load { background: #4CAF50; color: #000; }
+        .btn-rec { background: #FFD600; color: #000; }
+        .btn-tap { background: #FFD600; color: #000; font-size: 28px; display: none; box-shadow: 0 0 15px #FFD600; }
+        .btn-bake { background: #E91E63; color: #fff; display: none; }
+        .btn-stop { background: #F44336; color: #fff; display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="admin-panel">
+        <div id="h-row">
+            <span style="font-size: 12px; color: #4CAF50; font-weight: bold;">ADMIN STUDIO V3.2</span>
+            <button id="fs-btn" onclick="toggleFS()">FULLSCREEN</button>
+        </div>
+        <div class="input-row">
+            <input id="in-name" style="flex:1" placeholder="SONG NAME">
+            <input id="yt-url" style="flex:1.5" placeholder="YouTube URL (Optional)">
+            <button class="btn btn-load" onclick="loadTab()">1. LOAD TAB</button>
+        </div>
+        <textarea id="tab-input" placeholder="Paste Guitar Tab here..."></textarea>
+    </div>
+
+    <div id="game-area">
+        <div id="countdown"></div>
+        <canvas id="game-canvas"></canvas>
+    </div>
+
+    <div id="controls">
+        <button id="rec-btn" class="btn btn-rec" style="display:none;" onclick="startRecording()">2. RECORD RHYTHM</button>
+        <button id="tap-btn" class="btn btn-tap" onmousedown="handleTap(event)" ontouchstart="handleTap(event)">TAP!</button>
+        <button id="bake-btn" class="btn btn-bake" onclick="bakePlayer()">3. BAKE PLAYER (AUTO-LOOP)</button>
+        <button id="stop-btn" class="btn btn-stop" onclick="stopRecording()">STOP</button>
+    </div>
+
+<script>
+    let currentNotes = [], songName = "", isRecording = false, recordingStartTime = 0, currentTapIndex = 0;
+
+    function toggleFS() {
+        const doc = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (doc.requestFullscreen) doc.requestFullscreen();
+            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
+    function loadTab() {
+        songName = document.getElementById('in-name').value || "New Track";
+        const rawTab = document.getElementById('tab-input').value;
+        const stringMap = { 'e':0, 'B':1, 'G':2, 'D':3, 'A':4, 'E':5 };
+        let tempNotes = [];
+
+        if(!rawTab.trim()) { alert("Please paste tab content."); return; }
+
+        const lines = rawTab.split('\n');
+        lines.forEach(line => {
+            let cleanLine = line.trim();
+            if (cleanLine.length > 0 && stringMap[cleanLine.charAt(0)] !== undefined) {
+                let sIdx = stringMap[cleanLine.charAt(0)];
+                for (let i = 0; i < line.length; i++) {
+                    let char = line[i];
+                    if (char >= '0' && char <= '9') {
+                        let fNum = char;
+                        if (i + 1 < line.length && line[i+1] >= '0' && line[i+1] <= '9') {
+                            fNum += line[i+1]; i++;
+                        }
+                        tempNotes.push({ string: sIdx, fret: parseInt(fNum), time: 0, rawPos: i });
+                    }
+                }
+            }
+        });
+
+        currentNotes = tempNotes.sort((a, b) => a.rawPos - b.rawPos);
+        if (currentNotes.length > 0) {
+            document.getElementById('rec-btn').style.display = 'flex';
+            alert("Success: " + currentNotes.length + " notes parsed.");
+        }
+    }
+
+    function startRecording() {
+        let count = 3;
+        document.getElementById('rec-btn').style.display = 'none';
+        const timer = setInterval(() => {
+            document.getElementById('countdown').textContent = count > 0 ? count : (count === 0 ? "GO!" : "");
+            if (count === -1) {
+                clearInterval(timer);
+                document.getElementById('countdown').textContent = "";
+                isRecording = true; currentTapIndex = 0; recordingStartTime = performance.now();
+                document.getElementById('tap-btn').style.display = 'flex';
+                document.getElementById('stop-btn').style.display = 'flex';
+            }
+            count--;
+        }, 800);
+    }
+
+    function handleTap(e) {
+        if (e) e.preventDefault();
+        if (!isRecording || currentTapIndex >= currentNotes.length) return;
+        currentNotes[currentTapIndex].time = performance.now() - recordingStartTime;
+        currentTapIndex++;
+        if (currentTapIndex === currentNotes.length) stopRecording();
+    }
+
+    function stopRecording() {
+        isRecording = false;
+        document.getElementById('tap-btn').style.display = 'none';
+        document.getElementById('stop-btn').style.display = 'none';
+        document.getElementById('bake-btn').style.display = 'flex';
+    }
+
+    function drawAdmin() {
+        const canvas = document.getElementById('game-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (canvas.width !== canvas.clientWidth) { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const hX = 120;
+        for (let i = 1; i <= 6; i++) {
+            let y = (canvas.height / 7) * i;
+            ctx.strokeStyle = i > 3 ? "#444" : "#222"; ctx.lineWidth = i > 3 ? 4 : 2;
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
+        ctx.strokeStyle = "#4CAF50"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(hX, 0); ctx.lineTo(hX, canvas.height); ctx.stroke();
+        if (isRecording && currentTapIndex < currentNotes.length) {
+            let note = currentNotes[currentTapIndex];
+            let y = (canvas.height / 7) * (note.string + 1);
+            ctx.fillStyle = "rgba(76, 175, 80, 0.5)"; ctx.beginPath(); ctx.arc(hX + 50, y, 25, 0, Math.PI * 2); ctx.fill();
+        }
+        requestAnimationFrame(drawAdmin);
+    }
+    drawAdmin();
+
+    function bakePlayer() {
+        const songJSON = JSON.stringify(currentNotes.map(n => ({s:n.string, f:n.fret, t:n.time})));
+        const ytIn = document.getElementById('yt-url').value;
+        let yId = "";
+        if (ytIn.includes("v=")) yId = ytIn.split("v=")[1].split("&")[0];
+        else if (ytIn.includes("youtu.be/")) yId = ytIn.split("youtu.be/")[1].split("?")[0];
+
+        const pHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PLAYER: ${songName}</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; position: relative; }
-        /* Added Fullscreen Button Style */
-        #fs-btn { position: absolute; right: 10px; background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+        #fs-p-btn { position: absolute; right: 10px; background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
         #v { flex: 1; position: relative; overflow: hidden; }
         canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
         #yt { width: 100%; height: 100%; border: none; opacity: 0; transition: opacity 0.5s; position: absolute; top: 0; left: 0; }
@@ -20,10 +182,10 @@
         .active { background: #4CAF50; color: #000; }
     </style>
 </head>
-<body id="pb" data-song='[{"s":5,"f":0,"t":401.2000000178814},{"s":5,"f":3,"t":1069},{"s":5,"f":4,"t":1365},{"s":4,"f":2,"t":1599.300000011921},{"s":3,"f":2,"t":1860.7000000178814},{"s":3,"f":0,"t":2115.800000011921},{"s":4,"f":2,"t":2722.0999999940395},{"s":3,"f":4,"t":2990.2000000178814},{"s":4,"f":2,"t":3479.5},{"s":3,"f":0,"t":3727.5},{"s":3,"f":2,"t":3947.9000000059605}]'>
+<body id="pb" data-song='${songJSON}'>
     <div id="h">
-        DAY RIPPER
-        <button id="fs-btn" onclick="toggleFS()">GO FULLSCREEN</button>
+        ${songName.toUpperCase()}
+        <button id="fs-p-btn" onclick="toggleFSP()">FULLSCREEN</button>
     </div>
     <div id="v"><div id="yt"></div><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
     <div id="ctrl">
@@ -32,36 +194,33 @@
         <button id="pp" class="cb" onclick="togP()">PAUSE</button>
         <button class="cb stop" onclick="reset()">STOP</button>
     </div>
-<script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://www.youtube.com/iframe_api"></scrip` + `t>
 <script>
     let data = [];
     const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
     let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp;
 
+    function toggleFSP() {
+        const doc = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (doc.requestFullscreen) doc.requestFullscreen();
+            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
     function onYouTubeIframeAPIReady() {
-        if("") {
+        if("${yId}") {
             ytp = new YT.Player('yt', {
-                videoId: '',
+                videoId: '${yId}',
                 playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'modestbranding': 1 },
                 events: { 'onReady': () => console.log("YT Ready") }
             });
         }
     }
 
-    function toggleFS() {
-        const doc = document.documentElement;
-        if (!document.fullscreenElement) {
-            if (doc.requestFullscreen) doc.requestFullscreen();
-            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-            document.getElementById('fs-btn').textContent = "EXIT FS";
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
-            document.getElementById('fs-btn').textContent = "GO FULLSCREEN";
-        }
-    }
-
     async function start() {
-        // Auto-trigger FS on start
         const doc = document.documentElement;
         if (doc.requestFullscreen) doc.requestFullscreen();
         else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
@@ -160,7 +319,7 @@
             }
         });
 
-        if (play && allFinished && (now - data[data.length-1].t) > 1500) {
+        if (play && allFinished && data.length > 0 && (now - data[data.length-1].t) > 1500) {
             startT = performance.now();
             if(ytp) ytp.seekTo(0);
             data.forEach(n => { n.p = false; n.h = false; });
@@ -170,6 +329,16 @@
         requestAnimationFrame(run);
     }
     run();
+</script>
+</body>
+</html>`;
+
+        const blob = new Blob([pHtml], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = songName.toLowerCase().replace(/ /g, '-') + ".html";
+        a.click();
+    }
 </script>
 </body>
 </html>
