@@ -7,7 +7,7 @@
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; position: relative; }
-        #fs-btn { position: absolute; right: 10px; background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        #fs-btn { position: absolute; right: 10px; background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
         #v { flex: 1; position: relative; overflow: hidden; }
         canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
         #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
@@ -22,7 +22,7 @@
     
     <div id="h">
         DAY RIPPER 
-        <button id="fs-btn" onclick="toggleFS()">FULLSCREEN</button>
+        <button id="fs-btn" onclick="toggleFS()">GO FULLSCREEN</button>
     </div>
 
     <div id="v">
@@ -43,27 +43,34 @@
     let play = false, startT = 0, pausedT = 0, speed = 1.0, ac, an, dArr;
 
     function toggleFS() {
+        const doc = document.documentElement;
         if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
+            if (doc.requestFullscreen) doc.requestFullscreen();
+            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
             document.getElementById('fs-btn').textContent = "EXIT FS";
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-                document.getElementById('fs-btn').textContent = "FULLSCREEN";
-            }
+            if (document.exitFullscreen) document.exitFullscreen();
+            document.getElementById('fs-btn').textContent = "GO FULLSCREEN";
         }
     }
 
     async function start() {
+        // Trigger Fullscreen on first interaction
+        const doc = document.documentElement;
+        if (doc.requestFullscreen) doc.requestFullscreen();
+        else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+
         data = JSON.parse(document.getElementById('pb').getAttribute('data-song'));
         ac = new (window.AudioContext || window.webkitAudioContext)();
         if (ac.state === 'suspended') await ac.resume();
+        
         try {
             const s = await navigator.mediaDevices.getUserMedia({ audio: true });
             const src = ac.createMediaStreamSource(s);
             an = ac.createAnalyser(); an.fftSize = 2048;
             src.connect(an); dArr = new Float32Array(an.fftSize);
-        } catch (e) { console.warn("Mic Off"); }
+        } catch (e) { console.warn("Mic Access Denied"); }
+
         document.getElementById('ov').style.display = 'none';
         play = true; startT = performance.now();
         data.forEach(n => { n.p = false; n.h = false; });
@@ -79,13 +86,19 @@
     }
 
     function reset() { play = false; document.getElementById('ov').style.display = 'flex'; }
+    
     function togP() { 
         play = !play; 
         if(!play) pausedT = performance.now() - startT; 
         else startT = performance.now() - pausedT; 
         document.getElementById('pp').textContent = play ? "PAUSE" : "PLAY";
     }
-    function spd(s, b) { speed = s; document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); }
+
+    function spd(s, b) { 
+        speed = s; 
+        document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active')); 
+        b.classList.add('active'); 
+    }
 
     function getP() {
         if (!an) return 0;
@@ -102,15 +115,19 @@
 
     function run() {
         const c = document.getElementById('pc'); const x = c.getContext('2d');
-        if (c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
+        if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
+            c.width = c.clientWidth; c.height = c.clientHeight;
+        }
         x.clearRect(0, 0, c.width, c.height);
         const now = play ? (performance.now() - startT) * speed : pausedT * speed;
         const hX = 120; let cp = getP(); 
         
+        // Draw String Lines
         for (let i = 1; i <= 6; i++) {
             let y = (c.height / 7) * i; x.strokeStyle = "#222"; x.lineWidth = 4;
             x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
         }
+        // Draw Hit Line
         x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
         x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, c.height); x.stroke();
 
@@ -118,35 +135,32 @@
         let sortedNotes = data.filter(n => (hX + ((n.t - now) * 0.35)) > -100).sort((a,b) => a.t - b.t);
 
         // --- RHYTHM GUIDE LINE ---
-        // Connects the note currently crossing the line to the next one
         if (play && sortedNotes.length > 1) {
             let n1 = sortedNotes.find(n => (hX + ((n.t - now) * 0.35)) <= hX + 50 && (hX + ((n.t - now) * 0.35)) >= -50);
             let n2 = sortedNotes.find(n => (hX + ((n.t - now) * 0.35)) > (n1 ? hX + ((n1.t - now) * 0.35) : hX));
-            
             if (n1 && n2) {
-                let x1 = hX + ((n1.t - now) * 0.35);
-                let y1 = (c.height / 7) * (n1.s + 1);
-                let x2 = hX + ((n2.t - now) * 0.35);
-                let y2 = (c.height / 7) * (n2.s + 1);
-                
-                x.setLineDash([5, 10]);
-                x.strokeStyle = "rgba(76, 175, 80, 0.4)";
-                x.lineWidth = 2;
-                x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2); x.stroke();
-                x.setLineDash([]);
+                let x1 = hX + ((n1.t - now) * 0.35); let y1 = (c.height / 7) * (n1.s + 1);
+                let x2 = hX + ((n2.t - now) * 0.35); let y2 = (c.height / 7) * (n2.s + 1);
+                x.setLineDash([5, 8]); x.strokeStyle = "rgba(76, 175, 80, 0.4)"; x.lineWidth = 2;
+                x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2); x.stroke(); x.setLineDash([]);
             }
         }
 
         data.forEach(n => {
             let px = hX + ((n.t - now) * 0.35);
             if (px > -60) allFinished = false; 
+            
             let tf = freqs[n.s] * Math.pow(2, n.f / 12);
             
+            // Sound Playback trigger
             if (play && px <= hX && !n.p) { pNote(n.s, n.f); n.p = true; }
+
+            // Detection Logic (Positive Only)
             if (play && px <= hX + 25 && px >= hX - 60 && !n.h && cp > 0) {
                 if (Math.abs(cp - tf) < tf * 0.1) n.h = true;
             }
 
+            // Draw Note
             if (px > -100 && px < c.width + 100) {
                 let y = (c.height / 7) * (n.s + 1);
                 x.fillStyle = n.h ? "#FFF" : "#4CAF50";
@@ -156,6 +170,7 @@
             }
         });
 
+        // Auto Loop
         if (play && allFinished && data.length > 0) {
             startT = performance.now();
             data.forEach(n => { n.p = false; n.h = false; });
