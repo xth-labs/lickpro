@@ -3,83 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BAZ-TECH: Admin Studio V3.2</title>
+    <title>PLAYER: DAY RIPPER</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; overflow: hidden; }
-        #admin-panel { height: 45%; background: #111; border-bottom: 3px solid #4CAF50; padding: 15px; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
-        .input-row { display: flex; gap: 10px; }
-        input, textarea { background: #000; color: #4CAF50; border: 1px solid #333; padding: 12px; font-family: 'Courier New', monospace; border-radius: 5px; font-size: 14px; outline: none; }
-        textarea { flex: 1; resize: none; border-color: #222; }
-        #game-area { flex: 1; position: relative; background: #000; }
-        canvas { width: 100%; height: 100%; display: block; }
-        #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); z-index: 100; }
-        .pb { padding: 25px 50px; background: #4CAF50; color: #000; border: none; border-radius: 50px; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(76,175,80,0.4); }
-        #ctrl { height: 70px; background: #111; display: flex; align-items: center; padding: 0 10px; gap: 8px; border-top: 2px solid #222; }
-        .cb { flex: 1; padding: 12px; background: #333; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; position: relative; }
+        /* Added Fullscreen Button Style */
+        #fs-btn { position: absolute; right: 10px; background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+        #v { flex: 1; position: relative; overflow: hidden; }
+        canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
+        #yt { width: 100%; height: 100%; border: none; opacity: 0; transition: opacity 0.5s; position: absolute; top: 0; left: 0; }
+        #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
+        .pb { padding: 20px 40px; background: #4CAF50; color: #000; border: none; border-radius: 50px; font-size: 20px; font-weight: bold; cursor: pointer; }
+        #ctrl { height: 80px; background: #111; display: flex; align-items: center; padding: 0 10px; gap: 10px; border-top: 2px solid #222; }
+        .cb { flex: 1; padding: 15px; background: #333; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .stop { background: #F44336; }
         .active { background: #4CAF50; color: #000; }
-        #fs-ind { position: absolute; top: 10px; right: 10px; font-size: 10px; color: #444; }
     </style>
 </head>
-<body id="pb" data-song='[{"s":3,"f":2,"t":588.4},{"s":3,"f":4,"t":1133.1},{"s":2,"f":2,"t":1630.9},{"s":2,"f":4,"t":2118.6},{"s":1,"f":2,"t":2568.1},{"s":1,"f":5,"t":3037.4},{"s":0,"f":2,"t":3532.7},{"s":0,"f":5,"t":3950.5}]'>
-
-    <div id="admin-panel">
-        <div class="input-row">
-            <input type="text" id="s-name" placeholder="Song Name" value="DAY TRIPPER" style="flex:1">
-            <button class="cb" onclick="updateSong()" style="flex:0.3; background: #4CAF50; color: #000;">LOAD TAB</button>
-        </div>
-        <textarea id="s-data" placeholder='Paste JSON here...'>[{"s":3,"f":2,"t":588.4},{"s":3,"f":4,"t":1133.1},{"s":2,"f":2,"t":1630.9},{"s":2,"f":4,"t":2118.6},{"s":1,"f":2,"t":2568.1},{"s":1,"f":5,"t":3037.4},{"s":0,"f":2,"t":3532.7},{"s":0,"f":5,"t":3950.5}]</textarea>
+<body id="pb" data-song='[{"s":5,"f":0,"t":401.2000000178814},{"s":5,"f":3,"t":1069},{"s":5,"f":4,"t":1365},{"s":4,"f":2,"t":1599.300000011921},{"s":3,"f":2,"t":1860.7000000178814},{"s":3,"f":0,"t":2115.800000011921},{"s":4,"f":2,"t":2722.0999999940395},{"s":3,"f":4,"t":2990.2000000178814},{"s":4,"f":2,"t":3479.5},{"s":3,"f":0,"t":3727.5},{"s":3,"f":2,"t":3947.9000000059605}]'>
+    <div id="h">
+        DAY RIPPER
+        <button id="fs-btn" onclick="toggleFS()">GO FULLSCREEN</button>
     </div>
-
-    <div id="game-area">
-        <div id="fs-ind">AUTO-FS ENABLED</div>
-        <canvas id="pc"></canvas>
-        <div id="ov"><button class="pb" onclick="start()">START SESSION</button></div>
-    </div>
-
+    <div id="v"><div id="yt"></div><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
     <div id="ctrl">
         <button class="cb" onclick="spd(0.5, this)">0.5x</button>
         <button class="cb active" onclick="spd(1.0, this)">1.0x</button>
         <button id="pp" class="cb" onclick="togP()">PAUSE</button>
-        <button class="cb stop" onclick="reset()">STOP / EDIT</button>
+        <button class="cb stop" onclick="reset()">STOP</button>
     </div>
-
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
     let data = [];
     const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
-    let play = false, startT = 0, pausedT = 0, speed = 1.0, ac, an, dArr;
+    let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp;
 
-    function updateSong() {
-        try {
-            const raw = document.getElementById('s-data').value;
-            data = JSON.parse(raw);
-            document.getElementById('pb').setAttribute('data-song', raw);
-            alert("Tab Loaded Successfully");
-        } catch(e) { alert("Invalid JSON Data"); }
+    function onYouTubeIframeAPIReady() {
+        if("") {
+            ytp = new YT.Player('yt', {
+                videoId: '',
+                playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'modestbranding': 1 },
+                events: { 'onReady': () => console.log("YT Ready") }
+            });
+        }
+    }
+
+    function toggleFS() {
+        const doc = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (doc.requestFullscreen) doc.requestFullscreen();
+            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+            document.getElementById('fs-btn').textContent = "EXIT FS";
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+            document.getElementById('fs-btn').textContent = "GO FULLSCREEN";
+        }
     }
 
     async function start() {
-        // Force Fullscreen for Dad's testing
+        // Auto-trigger FS on start
         const doc = document.documentElement;
         if (doc.requestFullscreen) doc.requestFullscreen();
         else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
 
-        data = JSON.parse(document.getElementById('pb').getAttribute('data-song'));
+        const raw = document.getElementById('pb').getAttribute('data-song');
+        data = JSON.parse(raw);
         ac = new (window.AudioContext || window.webkitAudioContext)();
         if (ac.state === 'suspended') await ac.resume();
-        
         try {
             const s = await navigator.mediaDevices.getUserMedia({ audio: true });
             const src = ac.createMediaStreamSource(s);
             an = ac.createAnalyser(); an.fftSize = 2048;
             src.connect(an); dArr = new Float32Array(an.fftSize);
-        } catch (e) { console.warn("Mic Access Denied"); }
-
+        } catch (e) { console.warn("Mic Off"); }
         document.getElementById('ov').style.display = 'none';
-        document.getElementById('admin-panel').style.display = 'none'; // Hide editor while playing
         play = true; startT = performance.now();
+        if(ytp && ytp.playVideo) ytp.playVideo();
         data.forEach(n => { n.p = false; n.h = false; });
+    }
+
+    function reset() {
+        play = false;
+        document.getElementById('ov').style.display = 'flex';
+        if(ytp) { ytp.stopVideo(); ytp.seekTo(0); }
+        document.getElementById('pp').textContent = "PAUSE";
+        if (document.exitFullscreen) document.exitFullscreen();
+    }
+
+    function togP() {
+        play = !play;
+        document.getElementById('pp').textContent = play ? "PAUSE" : "PLAY";
+        if(ytp) play ? ytp.playVideo() : ytp.pauseVideo();
+        if(!play) pausedT = performance.now() - startT;
+        else startT = performance.now() - pausedT;
+    }
+
+    function spd(s, b) {
+        speed = s;
+        document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active'));
+        b.classList.add('active');
+        if(ytp) ytp.setPlaybackRate(s);
     }
 
     function pNote(s, f) {
@@ -91,77 +114,42 @@
         o.start(); o.stop(ac.currentTime + 0.6);
     }
 
-    function reset() { 
-        play = false; 
-        document.getElementById('ov').style.display = 'flex'; 
-        document.getElementById('admin-panel').style.display = 'flex';
-        if (document.exitFullscreen) document.exitFullscreen();
-    }
-    
-    function togP() { 
-        play = !play; 
-        if(!play) pausedT = performance.now() - startT; 
-        else startT = performance.now() - pausedT; 
-        document.getElementById('pp').textContent = play ? "PAUSE" : "PLAY";
-    }
-
-    function spd(s, b) { 
-        speed = s; 
-        document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active')); 
-        b.classList.add('active'); 
-    }
-
     function getP() {
         if (!an) return 0;
         an.getFloatTimeDomainData(dArr);
         let rms = 0; for (let i = 0; i < dArr.length; i++) rms += dArr[i] * dArr[i];
-        if (Math.sqrt(rms / dArr.length) < 0.01) return 0;
+        if (Math.sqrt(rms / dArr.length) < 0.015) return 0;
         let bR = 0, bP = -1;
         for (let p = 40; p < 500; p++) {
             let r = 0; for (let i = 0; i < dArr.length - p; i++) r += dArr[i] * dArr[i + p];
             if (r > bR) { bR = r; bP = p; }
         }
-        return bP > 0 ? ac.sampleRate / bP : 0;
+        return ac.sampleRate / bP;
     }
 
     function run() {
         const c = document.getElementById('pc'); const x = c.getContext('2d');
-        if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
-            c.width = c.clientWidth; c.height = c.clientHeight;
-        }
+        if (c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
         x.clearRect(0, 0, c.width, c.height);
         const now = play ? (performance.now() - startT) * speed : pausedT * speed;
-        const hX = 120; let cp = getP(); 
-        
+        const hX = 120; let cp = getP(); let bg = "#000";
         for (let i = 1; i <= 6; i++) {
-            let y = (c.height / 7) * i; x.strokeStyle = "#222"; x.lineWidth = 4;
+            let y = (c.height / 7) * i; x.strokeStyle = "#222"; x.lineWidth = i > 3 ? 4 : 2;
             x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
         }
         x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
         x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, c.height); x.stroke();
-
+        
         let allFinished = true;
-        let sortedNotes = data.filter(n => (hX + ((n.t - now) * 0.35)) > -100).sort((a,b) => a.t - b.t);
-
-        // --- RHYTHM GUIDE ---
-        if (play && sortedNotes.length > 1) {
-            let n1 = sortedNotes.find(n => (hX + ((n.t - now) * 0.35)) <= hX + 50 && (hX + ((n.t - now) * 0.35)) >= -50);
-            let n2 = sortedNotes.find(n => (hX + ((n.t - now) * 0.35)) > (n1 ? hX + ((n1.t - now) * 0.35) : hX));
-            if (n1 && n2) {
-                let x1 = hX + ((n1.t - now) * 0.35); let y1 = (c.height / 7) * (n1.s + 1);
-                let x2 = hX + ((n2.t - now) * 0.35); let y2 = (c.height / 7) * (n2.s + 1);
-                x.setLineDash([5, 8]); x.strokeStyle = "rgba(76, 175, 80, 0.4)"; x.lineWidth = 2;
-                x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2); x.stroke(); x.setLineDash([]);
-            }
-        }
-
         data.forEach(n => {
             let px = hX + ((n.t - now) * 0.35);
-            if (px > -60) allFinished = false; 
+            if (px > -50) allFinished = false; 
+            
             let tf = freqs[n.s] * Math.pow(2, n.f / 12);
             if (play && px <= hX && !n.p) { pNote(n.s, n.f); n.p = true; }
-            if (play && px <= hX + 25 && px >= hX - 60 && !n.h && cp > 0) {
+            if (play && Math.abs(px - hX) < 25 && !n.h && cp > 0) {
                 if (Math.abs(cp - tf) < tf * 0.1) n.h = true;
+                else bg = "#300";
             }
             if (px > -100 && px < c.width + 100) {
                 let y = (c.height / 7) * (n.s + 1);
@@ -172,10 +160,13 @@
             }
         });
 
-        if (play && allFinished && data.length > 0) {
+        if (play && allFinished && (now - data[data.length-1].t) > 1500) {
             startT = performance.now();
+            if(ytp) ytp.seekTo(0);
             data.forEach(n => { n.p = false; n.h = false; });
         }
+
+        document.body.style.background = bg;
         requestAnimationFrame(run);
     }
     run();
