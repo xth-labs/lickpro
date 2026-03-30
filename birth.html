@@ -129,22 +129,24 @@
     }
 
     function spd(s, b) {
-        speed = s;
         document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active'));
         b.classList.add('active');
         if(ytp) ytp.setPlaybackRate(s);
-        // Sync backing track speed
+        
+        // Sync backing track speed with NEW speed value
         const audioEl = document.getElementById('btrack');
         if (audioEl) audioEl.playbackRate = s;
         
         // Fix timing when speed changes mid-playthrough
-        // Store the current "real" time and recalculate the offset
         if (play) {
             const currentRealTime = performance.now();
-            const elapsedScaledTime = (currentRealTime - startT) * speed;
-            // Reset startT so it maintains current visual position
+            const elapsedScaledTime = (currentRealTime - startT) * speed; // Use OLD speed
+            // Reset startT so it maintains current visual position with NEW speed
             startT = currentRealTime - (elapsedScaledTime / s);
         }
+        
+        // NOW update speed variable after using old value
+        speed = s;
     }
 
     function pNote(s, f) {
