@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PLAYER: New Track</title>
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; }
+        #v { flex: 1; position: relative; overflow: hidden; background: #e8e8e8; }
+        canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
+        #yt { width: 100%; height: 100%; border: none; opacity: 0; transition: opacity 0.5s; position: absolute; top: 0; left: 0; }
+        #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
+        .pb { padding: 20px 40px; background: #4CAF50; color: #000; border: none; border-radius: 50px; font-size: 20px; font-weight: bold; cursor: pointer; }
+        #ctrl { height: 80px; background: #111; display: flex; align-items: center; padding: 0 10px; gap: 10px; border-top: 2px solid #222; }
+        .cb { flex: 1; padding: 15px; background: #333; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .stop { background: #F44336; }
+        .active { background: #4CAF50; color: #000; }
+    </style>
+</head>
+<body id="pb" data-song='[{"s":4,"f":0,"t":5457.39999999851},{"s":4,"f":0,"t":5655.39999999851},{"s":4,"f":4,"t":5860.5},{"s":3,"f":2,"t":6052.10000000149},{"s":3,"f":5,"t":6271},{"s":3,"f":4,"t":6476.29999999702},{"s":3,"f":2,"t":6886.79999999702},{"s":4,"f":0,"t":7119.39999999851},{"s":4,"f":0,"t":8706.20000000298},{"s":4,"f":0,"t":8932.29999999702},{"s":4,"f":4,"t":9130.20000000298},{"s":3,"f":2,"t":9328.60000000149},{"s":3,"f":5,"t":9568},{"s":3,"f":4,"t":9779.89999999851},{"s":3,"f":2,"t":10204.10000000149},{"s":4,"f":0,"t":10416.5},{"s":3,"f":0,"t":12146.39999999851},{"s":3,"f":0,"t":12344.70000000298},{"s":3,"f":4,"t":12556.79999999702},{"s":2,"f":2,"t":12741.5},{"s":2,"f":5,"t":12987.79999999702},{"s":2,"f":4,"t":13240.79999999702},{"s":2,"f":2,"t":13644.5},{"s":3,"f":0,"t":13850.39999999851},{"s":4,"f":0,"t":15545.79999999702},{"s":4,"f":0,"t":15765.10000000149},{"s":4,"f":4,"t":15963.10000000149},{"s":3,"f":2,"t":16148.10000000149},{"s":3,"f":5,"t":16400.70000000298},{"s":3,"f":4,"t":16619.5},{"s":3,"f":2,"t":17085.20000000298},{"s":4,"f":0,"t":17317.29999999702},{"s":5,"f":0,"t":18972.5},{"s":5,"f":0,"t":19177.5},{"s":5,"f":4,"t":19389.5},{"s":4,"f":2,"t":19581.5},{"s":4,"f":5,"t":19841.10000000149},{"s":4,"f":4,"t":20039.39999999851},{"s":4,"f":2,"t":20483.89999999851},{"s":5,"f":0,"t":20689.29999999702},{"s":4,"f":0,"t":22440},{"s":4,"f":0,"t":22624.60000000149},{"s":4,"f":4,"t":22836.60000000149},{"s":3,"f":2,"t":23041.79999999702},{"s":3,"f":5,"t":23281.60000000149},{"s":3,"f":4,"t":23500},{"s":3,"f":2,"t":23917.10000000149},{"s":4,"f":0,"t":24129.20000000298}]' data-backing-track='./beat.mp3'>
+    <div id="h">NEW TRACK</div>
+    <div id="v"><div id="yt"></div><audio id="btrack" style="display:none;" loop></audio><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
+    <div id="ctrl" style="display:none;">
+        <button class="cb" onclick="spd(0.25, this)">0.25x</button>
+        <button class="cb" onclick="spd(0.5, this)">0.5x</button>
+        <button class="cb active" onclick="spd(1.0, this)">1.0x</button>
+        <button id="pp" class="cb" onclick="togP()">PAUSE</button>
+        <button id="mic-btn" class="cb" onclick="activateMic()" style="background: #FF5722;">🎤 MIC</button>
+        <div style="display: flex; align-items: center; gap: 8px; flex: 0.8;">
+            <span style="color: #fff; font-size: 12px; white-space: nowrap;">🔊 BT:</span>
+            <input type="range" id="vol-slider" min="0" max="100" value="70" style="flex: 1; cursor: pointer;" onchange="setVolume(this.value)" oninput="setVolume(this.value)">
+        </div>
+        <button class="cb stop" onclick="reset()">STOP</button>
+    </div>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    let data = [];
+    const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
+    let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp;
+    let backingTrackUrl = "", backingTrackLoaded = false;
+
+    function setVolume(value) {
+        const audioEl = document.getElementById('btrack');
+        audioEl.volume = value / 100;
+    }
+
+    function onYouTubeIframeAPIReady() {
+        if("") {
+            ytp = new YT.Player('yt', {
+                videoId: '',
+                playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'modestbranding': 1 },
+                events: { 'onReady': () => console.log("YT Ready") }
+            });
+        }
+    }
+
+    async function start() {
+        const raw = document.getElementById('pb').getAttribute('data-song');
+        backingTrackUrl = document.getElementById('pb').getAttribute('data-backing-track') || "";
+        data = JSON.parse(raw);
+        ac = new (window.AudioContext || window.webkitAudioContext)();
+        if (ac.state === 'suspended') await ac.resume();
+        document.getElementById('ov').style.display = 'none';
+        document.getElementById('ctrl').style.display = 'flex';
+        play = true; startT = performance.now();
+        if(ytp && ytp.playVideo) ytp.playVideo();
+        
+        // Load and play backing track if available
+        if (backingTrackUrl && backingTrackUrl.trim()) {
+            try {
+                const audioEl = document.getElementById('btrack');
+                audioEl.src = backingTrackUrl;
+                audioEl.crossOrigin = "anonymous";
+                audioEl.currentTime = 0;
+                await audioEl.play().catch(e => console.log("Backing track play error:", e));
+                backingTrackLoaded = true;
+            } catch (e) {
+                console.log("Failed to load backing track:", e);
+            }
+        }
+        
+        // Trigger fullscreen
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
+        
+        data.forEach(n => { n.p = false; n.h = false; });
+    }
+
+    async function activateMic() {
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const src = ac.createMediaStreamSource(s);
+            an = ac.createAnalyser(); an.fftSize = 2048;
+            src.connect(an); dArr = new Float32Array(an.fftSize);
+            document.getElementById('mic-btn').style.background = '#4CAF50';
+            document.getElementById('mic-btn').textContent = '🎤 ON';
+        } catch (e) { 
+            alert("Microphone access denied or unavailable");
+            console.warn("Mic access failed:", e); 
+        }
+    }
+
+    function reset() {
+        play = false;
+        document.getElementById('ov').style.display = 'flex';
+        document.getElementById('ctrl').style.display = 'none';
+        if(ytp) { ytp.stopVideo(); ytp.seekTo(0); }
+        const audioEl = document.getElementById('btrack');
+        if (audioEl) { audioEl.pause(); audioEl.currentTime = 0; }
+        document.getElementById('pp').textContent = "PAUSE";
+        document.getElementById('mic-btn').style.background = '#FF5722';
+        document.getElementById('mic-btn').textContent = '🎤 MIC';
+    }
+
+    function togP() {
+        play = !play;
+        document.getElementById('pp').textContent = play ? "PAUSE" : "PLAY";
+        if(ytp) play ? ytp.playVideo() : ytp.pauseVideo();
+        const audioEl = document.getElementById('btrack');
+        if (audioEl) {
+            if (play) audioEl.play().catch(e => console.log("Play error:", e));
+            else audioEl.pause();
+        }
+        if(!play) pausedT = performance.now() - startT;
+        else startT = performance.now() - pausedT;
+    }
+
+    function spd(s, b) {
+        speed = s;
+        document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active'));
+        b.classList.add('active');
+        if(ytp) ytp.setPlaybackRate(s);
+        // Sync backing track speed
+        const audioEl = document.getElementById('btrack');
+        if (audioEl) audioEl.playbackRate = s;
+    }
+
+    function pNote(s, f) {
+        if (!ac) return;
+        const o = ac.createOscillator(); const g = ac.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(freqs[s] * Math.pow(2, f / 12), ac.currentTime);
+        g.gain.setValueAtTime(0.2, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.6);
+        o.connect(g); g.connect(ac.destination);
+        o.start(); o.stop(ac.currentTime + 0.6);
+    }
+
+    function getP() {
+        if (!an) return 0;
+        an.getFloatTimeDomainData(dArr);
+        let rms = 0; for (let i = 0; i < dArr.length; i++) rms += dArr[i] * dArr[i];
+        if (Math.sqrt(rms / dArr.length) < 0.015) return 0;
+        let bR = 0, bP = -1;
+        for (let p = 40; p < 500; p++) {
+            let r = 0; for (let i = 0; i < dArr.length - p; i++) r += dArr[i] * dArr[i + p];
+            if (r > bR) { bR = r; bP = p; }
+        }
+        return ac.sampleRate / bP;
+    }
+
+    function run() {
+        const c = document.getElementById('pc'); const x = c.getContext('2d');
+        if (c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
+        x.clearRect(0, 0, c.width, c.height);
+        const now = play ? (performance.now() - startT) * speed : pausedT * speed;
+        const hX = 120; let cp = getP(); let bg = "#000";
+        
+        // String names and colors
+        const strings = ['e', 'B', 'G', 'D', 'A', 'E'];
+        const stringColors = ['#FF6B6B', '#FF8E72', '#FFA500', '#FFD700', '#87CEEB', '#9370DB'];
+        
+        for (let i = 1; i <= 6; i++) {
+            let y = (c.height / 7) * i;
+            x.strokeStyle = stringColors[i - 1];
+            x.lineWidth = i > 3 ? 4 : 2;
+            x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
+            
+            // Draw string label on the left
+            x.fillStyle = stringColors[i - 1];
+            x.textAlign = "center";
+            x.font = "bold 14px Arial";
+            x.fillText(strings[i - 1], hX / 2, y + 5);
+        }
+        
+        x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
+        x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, c.height); x.stroke();
+        
+        let allFinished = true;
+        data.forEach(n => {
+            let px = hX + ((n.t - now) * 0.35);
+            if (px > -50) allFinished = false; // Note is still on screen or coming up
+            
+            let tf = freqs[n.s] * Math.pow(2, n.f / 12);
+            if (play && px <= hX && !n.p) { pNote(n.s, n.f); n.p = true; }
+            if (play && Math.abs(px - hX) < 25 && !n.h && cp > 0) {
+                if (Math.abs(cp - tf) < tf * 0.1) n.h = true;
+                else bg = "#300";
+            }
+            if (px > -100 && px < c.width + 100) {
+                let y = (c.height / 7) * (n.s + 1);
+                x.fillStyle = n.h ? "#FFF" : stringColors[n.s];
+                x.beginPath(); x.roundRect(px-35, y-30, 70, 60, 15); x.fill();
+                x.fillStyle = "#000"; x.textAlign = "center"; x.font = "bold 30px Arial";
+                x.fillText(n.f, px, y + 10);
+            }
+        });
+
+        // AUTO-LOOP: Restart if everything has passed and 1.5 seconds of silence have occurred
+        if (play && allFinished && (now - data[data.length-1].t) > 1500) {
+            startT = performance.now();
+            if(ytp) ytp.seekTo(0);
+            data.forEach(n => { n.p = false; n.h = false; });
+        }
+
+        document.body.style.background = bg;
+        requestAnimationFrame(run);
+    }
+    run();
+</script>
+</body>
+</html>
