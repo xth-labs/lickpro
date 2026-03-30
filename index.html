@@ -6,10 +6,10 @@
     <title>PLAYER: DAY RIPPER</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
-        #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; }
+        #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; position: relative; }
+        #fs-btn { position: absolute; right: 10px; background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
         #v { flex: 1; position: relative; overflow: hidden; }
         canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
-        #yt { width: 100%; height: 100%; border: none; opacity: 0; transition: opacity 0.5s; position: absolute; top: 0; left: 0; }
         #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
         .pb { padding: 20px 40px; background: #4CAF50; color: #000; border: none; border-radius: 50px; font-size: 20px; font-weight: bold; cursor: pointer; }
         #ctrl { height: 80px; background: #111; display: flex; align-items: center; padding: 0 10px; gap: 10px; border-top: 2px solid #222; }
@@ -18,34 +18,44 @@
         .active { background: #4CAF50; color: #000; }
     </style>
 </head>
-<body id="pb" data-song='[{"s":5,"f":0,"t":401.2000000178814},{"s":5,"f":3,"t":1069},{"s":5,"f":4,"t":1365},{"s":4,"f":2,"t":1599.300000011921},{"s":3,"f":2,"t":1860.7000000178814},{"s":3,"f":0,"t":2115.800000011921},{"s":4,"f":2,"t":2722.0999999940395},{"s":3,"f":4,"t":2990.2000000178814},{"s":4,"f":2,"t":3479.5},{"s":3,"f":0,"t":3727.5},{"s":3,"f":2,"t":3947.9000000059605}]'>
-    <div id="h">DAY RIPPER</div>
-    <div id="v"><div id="yt"></div><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
+<body id="pb" data-song='[{"s":3,"f":2,"t":588.4},{"s":3,"f":4,"t":1133.1},{"s":2,"f":2,"t":1630.9},{"s":2,"f":4,"t":2118.6},{"s":1,"f":2,"t":2568.1},{"s":1,"f":5,"t":3037.4},{"s":0,"f":2,"t":3532.7},{"s":0,"f":5,"t":3950.5}]'>
+    
+    <div id="h">
+        DAY RIPPER 
+        <button id="fs-btn" onclick="toggleFS()">FULLSCREEN</button>
+    </div>
+
+    <div id="v">
+        <canvas id="pc"></canvas>
+        <div id="ov"><button class="pb" onclick="start()">START SESSION</button></div>
+    </div>
+
     <div id="ctrl">
         <button class="cb" onclick="spd(0.5, this)">0.5x</button>
         <button class="cb active" onclick="spd(1.0, this)">1.0x</button>
         <button id="pp" class="cb" onclick="togP()">PAUSE</button>
         <button class="cb stop" onclick="reset()">STOP</button>
     </div>
-<script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
     let data = [];
     const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
-    let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp;
+    let play = false, startT = 0, pausedT = 0, speed = 1.0, ac, an, dArr;
 
-    function onYouTubeIframeAPIReady() {
-        if("") {
-            ytp = new YT.Player('yt', {
-                videoId: '',
-                playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'modestbranding': 1 },
-                events: { 'onReady': () => console.log("YT Ready") }
-            });
+    function toggleFS() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            document.getElementById('fs-btn').textContent = "EXIT FS";
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                document.getElementById('fs-btn').textContent = "FULLSCREEN";
+            }
         }
     }
 
     async function start() {
-        const raw = document.getElementById('pb').getAttribute('data-song');
-        data = JSON.parse(raw);
+        data = JSON.parse(document.getElementById('pb').getAttribute('data-song'));
         ac = new (window.AudioContext || window.webkitAudioContext)();
         if (ac.state === 'suspended') await ac.resume();
         try {
@@ -56,30 +66,7 @@
         } catch (e) { console.warn("Mic Off"); }
         document.getElementById('ov').style.display = 'none';
         play = true; startT = performance.now();
-        if(ytp && ytp.playVideo) ytp.playVideo();
         data.forEach(n => { n.p = false; n.h = false; });
-    }
-
-    function reset() {
-        play = false;
-        document.getElementById('ov').style.display = 'flex';
-        if(ytp) { ytp.stopVideo(); ytp.seekTo(0); }
-        document.getElementById('pp').textContent = "PAUSE";
-    }
-
-    function togP() {
-        play = !play;
-        document.getElementById('pp').textContent = play ? "PAUSE" : "PLAY";
-        if(ytp) play ? ytp.playVideo() : ytp.pauseVideo();
-        if(!play) pausedT = performance.now() - startT;
-        else startT = performance.now() - pausedT;
-    }
-
-    function spd(s, b) {
-        speed = s;
-        document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active'));
-        b.classList.add('active');
-        if(ytp) ytp.setPlaybackRate(s);
     }
 
     function pNote(s, f) {
@@ -91,17 +78,26 @@
         o.start(); o.stop(ac.currentTime + 0.6);
     }
 
+    function reset() { play = false; document.getElementById('ov').style.display = 'flex'; }
+    function togP() { 
+        play = !play; 
+        if(!play) pausedT = performance.now() - startT; 
+        else startT = performance.now() - pausedT; 
+        document.getElementById('pp').textContent = play ? "PAUSE" : "PLAY";
+    }
+    function spd(s, b) { speed = s; document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active')); b.classList.add('active'); }
+
     function getP() {
         if (!an) return 0;
         an.getFloatTimeDomainData(dArr);
         let rms = 0; for (let i = 0; i < dArr.length; i++) rms += dArr[i] * dArr[i];
-        if (Math.sqrt(rms / dArr.length) < 0.015) return 0;
+        if (Math.sqrt(rms / dArr.length) < 0.01) return 0;
         let bR = 0, bP = -1;
         for (let p = 40; p < 500; p++) {
             let r = 0; for (let i = 0; i < dArr.length - p; i++) r += dArr[i] * dArr[i + p];
             if (r > bR) { bR = r; bP = p; }
         }
-        return ac.sampleRate / bP;
+        return bP > 0 ? ac.sampleRate / bP : 0;
     }
 
     function run() {
@@ -109,25 +105,48 @@
         if (c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
         x.clearRect(0, 0, c.width, c.height);
         const now = play ? (performance.now() - startT) * speed : pausedT * speed;
-        const hX = 120; let cp = getP(); let bg = "#000";
+        const hX = 120; let cp = getP(); 
+        
         for (let i = 1; i <= 6; i++) {
-            let y = (c.height / 7) * i; x.strokeStyle = "#222"; x.lineWidth = i > 3 ? 4 : 2;
+            let y = (c.height / 7) * i; x.strokeStyle = "#222"; x.lineWidth = 4;
             x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
         }
         x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
         x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, c.height); x.stroke();
-        
+
         let allFinished = true;
+        let sortedNotes = data.filter(n => (hX + ((n.t - now) * 0.35)) > -100).sort((a,b) => a.t - b.t);
+
+        // --- RHYTHM GUIDE LINE ---
+        // Connects the note currently crossing the line to the next one
+        if (play && sortedNotes.length > 1) {
+            let n1 = sortedNotes.find(n => (hX + ((n.t - now) * 0.35)) <= hX + 50 && (hX + ((n.t - now) * 0.35)) >= -50);
+            let n2 = sortedNotes.find(n => (hX + ((n.t - now) * 0.35)) > (n1 ? hX + ((n1.t - now) * 0.35) : hX));
+            
+            if (n1 && n2) {
+                let x1 = hX + ((n1.t - now) * 0.35);
+                let y1 = (c.height / 7) * (n1.s + 1);
+                let x2 = hX + ((n2.t - now) * 0.35);
+                let y2 = (c.height / 7) * (n2.s + 1);
+                
+                x.setLineDash([5, 10]);
+                x.strokeStyle = "rgba(76, 175, 80, 0.4)";
+                x.lineWidth = 2;
+                x.beginPath(); x.moveTo(x1, y1); x.lineTo(x2, y2); x.stroke();
+                x.setLineDash([]);
+            }
+        }
+
         data.forEach(n => {
             let px = hX + ((n.t - now) * 0.35);
-            if (px > -50) allFinished = false; // Note is still on screen or coming up
-            
+            if (px > -60) allFinished = false; 
             let tf = freqs[n.s] * Math.pow(2, n.f / 12);
+            
             if (play && px <= hX && !n.p) { pNote(n.s, n.f); n.p = true; }
-            if (play && Math.abs(px - hX) < 25 && !n.h && cp > 0) {
+            if (play && px <= hX + 25 && px >= hX - 60 && !n.h && cp > 0) {
                 if (Math.abs(cp - tf) < tf * 0.1) n.h = true;
-                else bg = "#300";
             }
+
             if (px > -100 && px < c.width + 100) {
                 let y = (c.height / 7) * (n.s + 1);
                 x.fillStyle = n.h ? "#FFF" : "#4CAF50";
@@ -137,14 +156,10 @@
             }
         });
 
-        // AUTO-LOOP: Restart if everything has passed and 1.5 seconds of silence have occurred
-        if (play && allFinished && (now - data[data.length-1].t) > 1500) {
+        if (play && allFinished && data.length > 0) {
             startT = performance.now();
-            if(ytp) ytp.seekTo(0);
             data.forEach(n => { n.p = false; n.h = false; });
         }
-
-        document.body.style.background = bg;
         requestAnimationFrame(run);
     }
     run();
