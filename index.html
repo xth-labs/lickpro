@@ -8,7 +8,7 @@
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; }
-        #v { flex: 1; position: relative; overflow: hidden; }
+        #v { flex: 1; position: relative; overflow: hidden; background: #e8e8e8; }
         canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
         #yt { width: 100%; height: 100%; border: none; opacity: 0; transition: opacity 0.5s; position: absolute; top: 0; left: 0; }
         #ov { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); z-index: 100; }
@@ -21,7 +21,7 @@
 </head>
 <body id="pb" data-song='[{"s":4,"f":0,"t":485.30000001192093},{"s":4,"f":0,"t":800.9000000357628},{"s":4,"f":4,"t":1110.9000000357628},{"s":3,"f":2,"t":1337},{"s":3,"f":5,"t":1660.5},{"s":3,"f":4,"t":1907.6000000238419},{"s":3,"f":2,"t":2450.400000035763},{"s":4,"f":0,"t":2684.400000035763},{"s":4,"f":0,"t":4492.600000023842},{"s":4,"f":0,"t":4774.5},{"s":4,"f":4,"t":5063.600000023842},{"s":3,"f":2,"t":5317.300000011921},{"s":3,"f":5,"t":5640.300000011921},{"s":3,"f":4,"t":5880.699999988079},{"s":3,"f":2,"t":6499},{"s":4,"f":0,"t":6726.100000023842},{"s":3,"f":0,"t":9103.699999988079},{"s":3,"f":0,"t":9350.5},{"s":3,"f":4,"t":9570.5},{"s":2,"f":2,"t":9846.100000023842},{"s":2,"f":5,"t":10127.199999988079},{"s":2,"f":4,"t":10375.100000023842},{"s":2,"f":2,"t":10877.199999988079},{"s":3,"f":0,"t":11089.400000035763},{"s":4,"f":0,"t":13166},{"s":4,"f":0,"t":13433.100000023842},{"s":4,"f":4,"t":13674.199999988079},{"s":3,"f":2,"t":13906.900000035763},{"s":3,"f":5,"t":14209.100000023842},{"s":3,"f":4,"t":14443},{"s":3,"f":2,"t":14972.400000035763},{"s":4,"f":0,"t":15219.5},{"s":5,"f":0,"t":17164.400000035763},{"s":5,"f":0,"t":17411.400000035763},{"s":5,"f":4,"t":17651.69999998808},{"s":4,"f":2,"t":17886.19999998808},{"s":4,"f":5,"t":18153.100000023842},{"s":4,"f":4,"t":18386.69999998808},{"s":4,"f":2,"t":18916.900000035763},{"s":5,"f":0,"t":19150.80000001192},{"s":4,"f":0,"t":20428.600000023842},{"s":4,"f":0,"t":20682.69999998808},{"s":4,"f":4,"t":20882.400000035763},{"s":3,"f":2,"t":21108.400000035763},{"s":3,"f":5,"t":21390.400000035763},{"s":3,"f":4,"t":21651.30000001192},{"s":3,"f":2,"t":22216.19999998808},{"s":4,"f":0,"t":22468.80000001192}]'>
     <div id="h">NEW TRACK</div>
-    <div id="v"><div id="yt"></div><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
+    <div id="v"><div id="yt"></div><audio id="btrack" style="display:none;"></audio><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
     <div id="ctrl">
         <button class="cb" onclick="spd(0.25, this)">0.25x</button>
         <button class="cb" onclick="spd(0.5, this)">0.5x</button>
@@ -34,7 +34,7 @@
 <script>
     let data = [];
     const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
-    let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp;
+    let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp, backingTrack = "";
 
     function onYouTubeIframeAPIReady() {
         if("") {
@@ -54,6 +54,19 @@
         document.getElementById('ov').style.display = 'none';
         play = true; startT = performance.now();
         if(ytp && ytp.playVideo) ytp.playVideo();
+        
+        // Handle backing track if available
+        if (backingTrack) {
+            const audioEl = document.getElementById('btrack');
+            audioEl.src = backingTrack;
+            audioEl.play().catch(e => console.log("Backing track play error:", e));
+        }
+        
+        // Trigger fullscreen
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
+        
         data.forEach(n => { n.p = false; n.h = false; });
     }
 
@@ -75,6 +88,9 @@
         play = false;
         document.getElementById('ov').style.display = 'flex';
         if(ytp) { ytp.stopVideo(); ytp.seekTo(0); }
+        // Stop backing track
+        const audioEl = document.getElementById('btrack');
+        if (audioEl) { audioEl.pause(); audioEl.currentTime = 0; }
         document.getElementById('pp').textContent = "PAUSE";
         document.getElementById('mic-btn').style.background = '#FF5722';
         document.getElementById('mic-btn').textContent = '🎤 MIC';
@@ -84,6 +100,11 @@
         play = !play;
         document.getElementById('pp').textContent = play ? "PAUSE" : "PLAY";
         if(ytp) play ? ytp.playVideo() : ytp.pauseVideo();
+        const audioEl = document.getElementById('btrack');
+        if (audioEl) {
+            if (play) audioEl.play().catch(e => console.log("Play error:", e));
+            else audioEl.pause();
+        }
         if(!play) pausedT = performance.now() - startT;
         else startT = performance.now() - pausedT;
     }
@@ -122,7 +143,7 @@
         if (c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
         x.clearRect(0, 0, c.width, c.height);
         const now = play ? (performance.now() - startT) * speed : pausedT * speed;
-        const hX = 120; let cp = getP(); let bg = "#000";
+        const hX = 120; let cp = getP(); let bg = "#e8e8e8";
         
         // String names and colors
         const strings = ['e', 'B', 'G', 'D', 'A', 'E'];
@@ -131,14 +152,14 @@
         for (let i = 1; i <= 6; i++) {
             let y = (c.height / 7) * i;
             x.strokeStyle = stringColors[i - 1];
-            x.lineWidth = i > 3 ? 4 : 2;
+            x.lineWidth = 5;
             x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
             
             // Draw string label on the left
             x.fillStyle = stringColors[i - 1];
             x.textAlign = "center";
-            x.font = "bold 14px Arial";
-            x.fillText(strings[i - 1], hX / 2, y + 5);
+            x.font = "bold 28px Arial";
+            x.fillText(strings[i - 1], hX / 2, y + 8);
         }
         
         x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
