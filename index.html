@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PLAYER: BEATLES DAY YRIPPER button id="fs-btn" onclick="toggleFS()" title="Fullscreen">⛶</button></title>
+    <title>PLAYER: New Track</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; }
@@ -18,13 +19,15 @@
         .active { background: #4CAF50; color: #000; }
     </style>
 </head>
-<body id="pb" data-song='[{"s":5,"f":0,"t":483},{"s":5,"f":3,"t":1196},{"s":5,"f":4,"t":1463},{"s":4,"f":2,"t":1681.800000011921},{"s":3,"f":2,"t":1929.8999999761581},{"s":3,"f":0,"t":2178.199999988079},{"s":4,"f":2,"t":2846.800000011921},{"s":3,"f":4,"t":3122.5},{"s":4,"f":2,"t":3625.599999964237},{"s":3,"f":0,"t":3881.599999964237},{"s":3,"f":2,"t":4156.699999988079}]'>
-    <div id="h">BEATLES DAY YRIPPER <button id="fs-btn" onclick="toggleFS()" title="Fullscreen">⛶</button> </div> 
+<body id="pb" data-song='[{"s":4,"f":0,"t":686.6999999880791},{"s":4,"f":0,"t":1439.5999999642372},{"s":4,"f":4,"t":1621.199999988079},{"s":3,"f":2,"t":1872.5},{"s":3,"f":5,"t":2125.5},{"s":3,"f":4,"t":2425.899999976158},{"s":3,"f":2,"t":2892.099999964237},{"s":4,"f":0,"t":3125.199999988079},{"s":4,"f":0,"t":4271.300000011921},{"s":4,"f":0,"t":4597.300000011921},{"s":4,"f":4,"t":4844.199999988079},{"s":3,"f":2,"t":5084.899999976158},{"s":3,"f":5,"t":5350.399999976158},{"s":3,"f":4,"t":5570.699999988079},{"s":3,"f":2,"t":6089.399999976158},{"s":4,"f":0,"t":6323.5}]'>
+    <div id="h">NEW TRACK</div>
     <div id="v"><div id="yt"></div><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
     <div id="ctrl">
+        <button class="cb" onclick="spd(0.25, this)">0.25x</button>
         <button class="cb" onclick="spd(0.5, this)">0.5x</button>
         <button class="cb active" onclick="spd(1.0, this)">1.0x</button>
         <button id="pp" class="cb" onclick="togP()">PAUSE</button>
+        <button id="mic-btn" class="cb" onclick="activateMic()" style="background: #FF5722;">🎤 MIC</button>
         <button class="cb stop" onclick="reset()">STOP</button>
     </div>
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -48,16 +51,24 @@
         data = JSON.parse(raw);
         ac = new (window.AudioContext || window.webkitAudioContext)();
         if (ac.state === 'suspended') await ac.resume();
+        document.getElementById('ov').style.display = 'none';
+        play = true; startT = performance.now();
+        if(ytp && ytp.playVideo) ytp.playVideo();
+        data.forEach(n => { n.p = false; n.h = false; });
+    }
+
+    async function activateMic() {
         try {
             const s = await navigator.mediaDevices.getUserMedia({ audio: true });
             const src = ac.createMediaStreamSource(s);
             an = ac.createAnalyser(); an.fftSize = 2048;
             src.connect(an); dArr = new Float32Array(an.fftSize);
-        } catch (e) { console.warn("Mic Off"); }
-        document.getElementById('ov').style.display = 'none';
-        play = true; startT = performance.now();
-        if(ytp && ytp.playVideo) ytp.playVideo();
-        data.forEach(n => { n.p = false; n.h = false; });
+            document.getElementById('mic-btn').style.background = '#4CAF50';
+            document.getElementById('mic-btn').textContent = '🎤 ON';
+        } catch (e) { 
+            alert("Microphone access denied or unavailable");
+            console.warn("Mic access failed:", e); 
+        }
     }
 
     function reset() {
@@ -65,6 +76,8 @@
         document.getElementById('ov').style.display = 'flex';
         if(ytp) { ytp.stopVideo(); ytp.seekTo(0); }
         document.getElementById('pp').textContent = "PAUSE";
+        document.getElementById('mic-btn').style.background = '#FF5722';
+        document.getElementById('mic-btn').textContent = '🎤 MIC';
     }
 
     function togP() {
@@ -110,10 +123,24 @@
         x.clearRect(0, 0, c.width, c.height);
         const now = play ? (performance.now() - startT) * speed : pausedT * speed;
         const hX = 120; let cp = getP(); let bg = "#000";
+        
+        // String names and colors
+        const strings = ['e', 'B', 'G', 'D', 'A', 'E'];
+        const stringColors = ['#FF6B6B', '#FF8E72', '#FFA500', '#FFD700', '#87CEEB', '#9370DB'];
+        
         for (let i = 1; i <= 6; i++) {
-            let y = (c.height / 7) * i; x.strokeStyle = "#222"; x.lineWidth = i > 3 ? 4 : 2;
+            let y = (c.height / 7) * i;
+            x.strokeStyle = stringColors[i - 1];
+            x.lineWidth = i > 3 ? 4 : 2;
             x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
+            
+            // Draw string label on the left
+            x.fillStyle = stringColors[i - 1];
+            x.textAlign = "center";
+            x.font = "bold 14px Arial";
+            x.fillText(strings[i - 1], hX / 2, y + 5);
         }
+        
         x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
         x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, c.height); x.stroke();
         
@@ -130,7 +157,7 @@
             }
             if (px > -100 && px < c.width + 100) {
                 let y = (c.height / 7) * (n.s + 1);
-                x.fillStyle = n.h ? "#FFF" : "#4CAF50";
+                x.fillStyle = n.h ? "#FFF" : stringColors[n.s];
                 x.beginPath(); x.roundRect(px-35, y-30, 70, 60, 15); x.fill();
                 x.fillStyle = "#000"; x.textAlign = "center"; x.font = "bold 30px Arial";
                 x.fillText(n.f, px, y + 10);
@@ -148,31 +175,6 @@
         requestAnimationFrame(run);
     }
     run();
-
- function toggleFS() {
-        const btn = document.getElementById('fs-btn');
-        const isFS = document.body.classList.toggle('fs-mode');
-        btn.textContent = isFS ? '✕' : '⛶';
-        // Try native fullscreen on Android
-        if (isFS) {
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            }
-        } else {
-            if (document.exitFullscreen && document.fullscreenElement) {
-                document.exitFullscreen().catch(() => {});
-            }
-        }
-        // Resize canvas after toggle
-        setTimeout(() => {
-            const canvas = document.getElementById('game-canvas');
-            if (canvas) { canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight; }
-        }, 100);
-    }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.body.classList.remove('fs-mode'); document.getElementById('fs-btn').textContent = '⛶'; }});
-    document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) { document.body.classList.remove('fs-mode'); document.getElementById('fs-btn').textContent = '⛶'; }});
-
-
 </script>
 </body>
 </html>
