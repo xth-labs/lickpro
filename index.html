@@ -8,9 +8,11 @@
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { width: 100vw; height: 100vh; background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; overflow: hidden; }
         #admin-panel { height: 45%; background: #111; border-bottom: 3px solid #4CAF50; padding: 15px; display: flex; flex-direction: column; gap: 10px; z-index: 10; }
-        /* Header for title and FS button */
-        #h-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-        #fs-btn { background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+        
+        /* Fullscreen button styling */
+        .header-row { display: flex; justify-content: space-between; align-items: center; }
+        #fs-btn { background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+
         .input-row { display: flex; gap: 10px; }
         input, textarea { background: #000; color: #4CAF50; border: 1px solid #333; padding: 12px; font-family: 'Courier New', monospace; border-radius: 5px; font-size: 14px; outline: none; }
         textarea { flex: 1; resize: none; border-color: #222; }
@@ -30,8 +32,8 @@
 <body>
 
     <div id="admin-panel">
-        <div id="h-row">
-            <span style="font-size: 12px; color: #4CAF50; font-weight: bold;">ADMIN STUDIO V3.2</span>
+        <div class="header-row">
+            <span style="font-size: 10px; color: #666;">BAZ-TECH STUDIO</span>
             <button id="fs-btn" onclick="toggleFS()">FULLSCREEN</button>
         </div>
         <div class="input-row">
@@ -57,13 +59,12 @@
 <script>
     let currentNotes = [], songName = "", isRecording = false, recordingStartTime = 0, currentTapIndex = 0;
 
+    // Only added this function
     function toggleFS() {
-        const doc = document.documentElement;
         if (!document.fullscreenElement) {
-            if (doc.requestFullscreen) doc.requestFullscreen();
-            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+            document.documentElement.requestFullscreen().catch(e => console.log(e));
         } else {
-            if (document.exitFullscreen) document.exitFullscreen();
+            document.exitFullscreen();
         }
     }
 
@@ -166,11 +167,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PLAYER: ${songName}</title>
+    <title>PLAYER: \${songName}</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
-        #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; position: relative; }
-        #fs-p-btn { position: absolute; right: 10px; background: #333; border: 1px solid #4CAF50; color: #4CAF50; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+        #h { height: 50px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #4CAF50; background: #111; font-weight: bold; }
         #v { flex: 1; position: relative; overflow: hidden; }
         canvas { width: 100%; height: 100%; display: block; position: absolute; z-index: 5; pointer-events: none; }
         #yt { width: 100%; height: 100%; border: none; opacity: 0; transition: opacity 0.5s; position: absolute; top: 0; left: 0; }
@@ -182,11 +182,8 @@
         .active { background: #4CAF50; color: #000; }
     </style>
 </head>
-<body id="pb" data-song='${songJSON}'>
-    <div id="h">
-        ${songName.toUpperCase()}
-        <button id="fs-p-btn" onclick="toggleFSP()">FULLSCREEN</button>
-    </div>
+<body id="pb" data-song='\${songJSON}'>
+    <div id="h">\${songName.toUpperCase()}</div>
     <div id="v"><div id="yt"></div><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
     <div id="ctrl">
         <button class="cb" onclick="spd(0.5, this)">0.5x</button>
@@ -200,20 +197,10 @@
     const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
     let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp;
 
-    function toggleFSP() {
-        const doc = document.documentElement;
-        if (!document.fullscreenElement) {
-            if (doc.requestFullscreen) doc.requestFullscreen();
-            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
-        }
-    }
-
     function onYouTubeIframeAPIReady() {
-        if("${yId}") {
+        if("\${yId}") {
             ytp = new YT.Player('yt', {
-                videoId: '${yId}',
+                videoId: '\${yId}',
                 playerVars: { 'autoplay': 0, 'controls': 0, 'disablekb': 1, 'modestbranding': 1 },
                 events: { 'onReady': () => console.log("YT Ready") }
             });
@@ -221,10 +208,6 @@
     }
 
     async function start() {
-        const doc = document.documentElement;
-        if (doc.requestFullscreen) doc.requestFullscreen();
-        else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-
         const raw = document.getElementById('pb').getAttribute('data-song');
         data = JSON.parse(raw);
         ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -246,7 +229,6 @@
         document.getElementById('ov').style.display = 'flex';
         if(ytp) { ytp.stopVideo(); ytp.seekTo(0); }
         document.getElementById('pp').textContent = "PAUSE";
-        if (document.exitFullscreen) document.exitFullscreen();
     }
 
     function togP() {
@@ -297,7 +279,7 @@
             x.beginPath(); x.moveTo(0, y); x.lineTo(c.width, y); x.stroke();
         }
         x.strokeStyle = "#4CAF50"; x.lineWidth = 4;
-        x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, c.height); x.stroke();
+        x.beginPath(); x.moveTo(hX, 0); x.lineTo(hX, canvas.height); x.stroke();
         
         let allFinished = true;
         data.forEach(n => {
@@ -319,7 +301,7 @@
             }
         });
 
-        if (play && allFinished && data.length > 0 && (now - data[data.length-1].t) > 1500) {
+        if (play && allFinished && (now - data[data.length-1].t) > 1500) {
             startT = performance.now();
             if(ytp) ytp.seekTo(0);
             data.forEach(n => { n.p = false; n.h = false; });
@@ -329,7 +311,7 @@
         requestAnimationFrame(run);
     }
     run();
-</script>
+</scrip` + `t>
 </body>
 </html>`;
 
