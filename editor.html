@@ -633,21 +633,31 @@
 </head>
 <body id="pb" data-song='${songJSON}' data-backing-track='${btIn}'>
     <div id="h">${songName.toUpperCase()}</div>
-    <div id="v"><div id="yt"></div><audio id="btrack" style="display:none;"></audio><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
+    <div id="v"><div id="yt"></div><audio id="btrack" style="display:none;" loop crossorigin="anonymous"></audio><canvas id="pc"></canvas><div id="ov"><button class="pb" onclick="start()">START SESSION</button></div></div>
     <div id="ctrl" style="display:none;">
         <button class="cb" onclick="spd(0.25, this)">0.25x</button>
         <button class="cb" onclick="spd(0.5, this)">0.5x</button>
         <button class="cb active" onclick="spd(1.0, this)">1.0x</button>
         <button id="pp" class="cb" onclick="togP()">PAUSE</button>
         <button id="mic-btn" class="cb" onclick="activateMic()" style="background: #FF5722;">🎤 MIC</button>
+        <div style="display: flex; align-items: center; gap: 8px; flex: 0.8;">
+            <span style="color: #fff; font-size: 12px; white-space: nowrap;">🔊 BT:</span>
+            <input type="range" id="vol-slider" min="0" max="100" value="70" style="flex: 1; cursor: pointer;" onchange="setVolume(this.value)" oninput="setVolume(this.value)">
+        </div>
         <button class="cb stop" onclick="reset()">STOP</button>
     </div>
 <script src="https://www.youtube.com/iframe_api"></scrip` + `t>
 <script>
     let data = [];
     const freqs = [329.63, 246.94, 196.0, 146.8, 110.0, 82.4];
+    const AUDIO_LATENCY_MS = 120; // Tweak this value (50-200ms) to sync visuals with audio
     let play = false, startT = 0, pausedT = 0, speed = 1.0, showV = false, ac, an, dArr, ytp;
     let backingTrackUrl = "", backingTrackLoaded = false;
+
+    function setVolume(value) {
+        const audioEl = document.getElementById('btrack');
+        audioEl.volume = value / 100;
+    }
 
     function onYouTubeIframeAPIReady() {
         if("${yId}") {
@@ -736,6 +746,12 @@
         document.querySelectorAll('.cb').forEach(btn => btn.classList.remove('active'));
         b.classList.add('active');
         if(ytp) ytp.setPlaybackRate(s);
+        
+        // Sync backing track speed
+        const audioEl = document.getElementById('btrack');
+        if (audioEl) audioEl.playbackRate = s;
+        // No complex timing math needed — audio element handles speed
+        // Visuals sync to audio.currentTime automatically in run()
     }
 
     function pNote(s, f) {
@@ -764,7 +780,19 @@
         const c = document.getElementById('pc'); const x = c.getContext('2d');
         if (c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
         x.clearRect(0, 0, c.width, c.height);
-        const now = play ? (performance.now() - startT) * speed : pausedT * speed;
+        
+        // Use audio element's currentTime as source of truth to prevent drift
+        const audioEl = document.getElementById('btrack');
+        let now = 0;
+        
+        if (play && audioEl) {
+            // Sync to backing track's actual position with latency offset
+            now = (audioEl.currentTime * 1000) - AUDIO_LATENCY_MS; // Subtract offset to delay visuals
+        } else {
+            // Fallback to calculation when not playing
+            now = play ? (performance.now() - startT) * speed : pausedT * speed;
+        }
+        
         const hX = 120; let cp = getP(); let bg = "#000";
         
         // String names and colors
@@ -809,8 +837,7 @@
 
         // AUTO-LOOP: Restart if everything has passed and 1.5 seconds of silence have occurred
         if (play && allFinished && (now - data[data.length-1].t) > 1500) {
-            startT = performance.now();
-            if(ytp) ytp.seekTo(0);
+            audioEl.currentTime = 0; // Reset backing track
             data.forEach(n => { n.p = false; n.h = false; });
         }
 
